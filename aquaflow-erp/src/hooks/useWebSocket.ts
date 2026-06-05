@@ -7,14 +7,17 @@ interface UseWebSocketOptions {
 }
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
-    // WebSocket URL - ensure it points to the backend server
-    // In development, use direct localhost:5000
-    // In production, use the same origin as the app
+    // WebSocket URL resolution:
+    // - Production (Vercel): use VITE_WS_URL pointing to Render backend
+    // - Development: connect directly to localhost:5000 backend
     const getWebSocketURL = () => {
-        if (process.env.NODE_ENV === 'production') {
-            return window.location.origin;
+        if (import.meta.env.VITE_WS_URL) {
+            return import.meta.env.VITE_WS_URL as string;
         }
-        // Development: connect directly to backend server
+        if (import.meta.env.PROD) {
+            // Fallback: derive WS URL from API URL if set
+            return import.meta.env.VITE_API_URL as string ?? window.location.origin;
+        }
         return 'http://localhost:5000';
     };
 

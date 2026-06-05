@@ -1,4 +1,4 @@
-name: CI/CD — AquaFeed ERP
+name: CI — AquaFeed ERP
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  # ─── Lint & Build Frontend ───────────────────────────────────────────────────
+  # ─── Lint & Build Frontend (Vercel) ──────────────────────────────────────────
   frontend:
     name: Frontend — Build & Lint
     runs-on: ubuntu-latest
@@ -32,22 +32,25 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Build
+      - name: Build (production)
         run: npm run build
         env:
+          # Set these secrets in GitHub: Settings → Secrets and variables → Actions
+          # VITE_API_URL → your Render backend URL e.g. https://aquafeed-erp-api.onrender.com
+          # VITE_WS_URL  → same as VITE_API_URL (Socket.IO uses HTTP upgrade)
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_WS_URL: ${{ secrets.VITE_WS_URL }}
 
-      - name: Upload build artifact
+      - name: Upload dist artifact
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
           path: aquaflow-erp/dist
           retention-days: 7
 
-  # ─── Lint Backend ────────────────────────────────────────────────────────────
+  # ─── Validate Backend (Render) ───────────────────────────────────────────────
   backend:
-    name: Backend — Lint
+    name: Backend — Validate
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -67,5 +70,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check main entry point
+      - name: Syntax check entry point
         run: node --check src/index.js
