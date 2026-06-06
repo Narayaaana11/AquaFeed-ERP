@@ -1,5 +1,6 @@
 require('dotenv').config();
 const http = require('http');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -214,17 +215,18 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
 
-// Serve React frontend in production
-if (process.env.NODE_ENV === 'production') {
-  const frontendBuildPath = path.join(__dirname, '../../aquaflow-erp/dist');
+// Serve React frontend only if the dist folder exists (self-hosted / same-server deploy).
+// When frontend is on Vercel and backend is on Render, dist won't exist — skip silently.
+const frontendBuildPath = path.join(__dirname, '../../aquaflow-erp/dist');
+if (fs.existsSync(frontendBuildPath)) {
+  console.log('📁 Serving bundled frontend from', frontendBuildPath);
   app.use(express.static(frontendBuildPath));
-
-  // Handle React Router — all non-API routes return the React app
+  // Handle React Router — return index.html for all non-API routes
   app.get('*', (req, res) => {
     res.sendFile(path.join(frontendBuildPath, 'index.html'));
   });
 } else {
-  // 404 handler for development (API only mode)
+  // API-only mode (Render backend + Vercel frontend)
   app.use('*', (req, res) => {
     res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found.` });
   });
