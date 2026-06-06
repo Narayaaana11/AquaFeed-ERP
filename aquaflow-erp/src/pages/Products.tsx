@@ -610,7 +610,7 @@ export default function Products() {
                 />
                 <FormNumber label="Low Stock Alert" placeholder="10" {...registerAdd("lowStockThreshold")} />
               </div>
-              <FormInput label="Image URL" placeholder="https://..." {...registerAdd("imageUrl")} />
+
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
@@ -677,7 +677,7 @@ export default function Products() {
                 <FormNumber label="Stock Qty" {...registerEdit("stock", validationRules.quantity)} error={editErrors.stock} />
                 <FormNumber label="Low Stock Alert" {...registerEdit("lowStockThreshold")} />
               </div>
-              <FormInput label="Image URL" {...registerEdit("imageUrl")} />
+
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setIsEditOpen(false); setSelectedProduct(null); }} className="flex-1 h-11 rounded-xl border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Cancel</button>
                 <button type="button" onClick={() => { setIsDeleteOpen(true); }} className="h-11 px-4 rounded-xl border border-destructive/20 bg-destructive/5 text-destructive text-sm font-display font-semibold hover:bg-destructive/10 transition-colors"><Trash2 className="w-4 h-4" /></button>

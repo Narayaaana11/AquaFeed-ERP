@@ -29,7 +29,6 @@ export function ProductCatalogBrowser({ onSelect, onClose }: ProductCatalogBrows
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [page, setPage] = useState(1);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -57,9 +56,7 @@ export function ProductCatalogBrowser({ onSelect, onClose }: ProductCatalogBrows
   const getCategoryClass = (cat: string) =>
     categoryColors[cat] || "bg-gray-100 text-gray-700";
 
-  const handleImgError = (id: string) => {
-    setImgErrors((prev) => new Set(prev).add(id));
-  };
+
 
   if (!mounted) return null;
 
@@ -148,37 +145,13 @@ export function ProductCatalogBrowser({ onSelect, onClose }: ProductCatalogBrows
                         : "border-border bg-surface hover:border-brand/40"
                     }`}
                   >
-                    {/* Image */}
-                    <div className="relative w-full aspect-square bg-secondary overflow-hidden">
-                      {!hasImgError ? (
-                        <img
-                          src={product.imageUrl}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                          onError={() => handleImgError(product.id)}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-secondary to-background">
-                          <div className="w-10 h-10 rounded-full bg-brand-light flex items-center justify-center">
-                            <Tag className="w-5 h-5 text-brand" />
-                          </div>
-                          <span className="text-[10px] text-muted-foreground px-2 text-center leading-tight">
-                            {product.brand}
-                          </span>
-                        </div>
-                      )}
-                      {isHovered && (
-                        <div className="absolute inset-0 bg-brand/10 flex items-center justify-center">
-                          <div className="bg-brand text-white rounded-full p-1.5 shadow-lg">
-                            <CheckCircle2 className="w-5 h-5" />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
                     {/* Info */}
-                    <div className="p-2.5">
+                    <div className="relative p-3 min-h-[6rem]">
+                      {isHovered && (
+                        <div className="absolute top-3 right-3 bg-brand text-white rounded-full p-0.5 shadow-sm">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </div>
+                      )}
                       <p className="font-display font-semibold text-xs text-foreground leading-tight line-clamp-2 min-h-[2.5rem]">
                         {product.name}
                       </p>
