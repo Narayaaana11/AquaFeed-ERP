@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLowStockProducts } from "@/hooks/useProducts";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
+import { AppLogo } from "@/components/AppLogo";
 
 interface TopNavbarProps {
   title: string;
@@ -43,23 +44,11 @@ export function TopNavbar({ title, subtitle }: TopNavbarProps) {
       {/* Left spacer */}
       <div className="flex-1 min-w-0"></div>
 
-      {/* Center: Company logo and name */}
+      {/* Center: App logo and company name */}
       <div className="flex items-center gap-2">
-        {user?.company?.logoUrl ? (
-          <img
-            src={user.company.logoUrl}
-            alt="Company logo"
-            className="w-8 h-8 rounded-lg object-cover"
-          />
-        ) : (
-          <img
-            src="/logo.png"
-            alt="AquaFeed ERP Logo"
-            className="w-8 h-8 rounded-lg object-cover"
-          />
-        )}
+        <AppLogo size="sm" />
         <span className="font-display font-bold text-base text-foreground">
-          {user?.company?.name || "AquaFlow ERP"}
+          {user?.company?.name || "AquaFeed ERP"}
         </span>
       </div>
 

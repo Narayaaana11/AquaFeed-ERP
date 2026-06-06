@@ -3,7 +3,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   ShoppingCart, Package, AlertTriangle, Users, TrendingUp,
-  DollarSign, Calendar, RefreshCw, Sparkles
+  DollarSign, Calendar, RefreshCw
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { useDashboard, useSalesTrend, useTopProducts, useInventoryValue } from "@/hooks/useReports";
 import { useLoadDemoData } from "@/hooks/useSettings";
 import { useWebSocketContext } from "@/hooks/useWebSocketContext";
+import { AppLogo } from "@/components/AppLogo";
 
 const COLORS = ["#14b8a6", "#0d9488", "#0f766e", "#115e59", "#134e4a"];
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -135,11 +136,11 @@ export default function Dashboard() {
       {isEmptyWorkspace && (
         <div className="bg-brand/10 border border-brand/20 rounded-xl p-5 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex gap-3">
-            <div className="w-10 h-10 rounded-lg bg-brand flex items-center justify-center shrink-0">
-              <Sparkles className="w-5 h-5 text-white animate-pulse" />
+            <div className="rounded-lg bg-white px-2 py-1.5 shrink-0 border border-brand/10">
+              <AppLogo size="xs" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-foreground text-sm">Welcome to AquaFlow ERP!</h3>
+              <h3 className="font-display font-bold text-foreground text-sm">Welcome to AquaFeed ERP!</h3>
               <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
                 Get started by adding products and customers, or populate your workspace with sample demo data (invoices, expenses, stock records) to see how the reports and analytics look in production.
               </p>

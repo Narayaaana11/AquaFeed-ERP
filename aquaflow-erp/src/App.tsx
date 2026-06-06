@@ -18,6 +18,7 @@ import Reports from "./pages/Reports.tsx";
 import Settings from "./pages/Settings.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { WebSocketProvider } from "@/hooks/useWebSocketContext";
+import { AppLogo } from "@/components/AppLogo";
 
 const queryClient = new QueryClient();
 
@@ -63,8 +64,9 @@ const App = () => {
     return (
       <div className="w-screen h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-full border-4 border-brand/20 border-t-brand animate-spin mx-auto mb-4" />
-          <p className="text-sm text-muted-foreground">Loading AquaFlow...</p>
+          <AppLogo size="lg" className="mx-auto mb-4" />
+          <div className="w-8 h-8 rounded-full border-4 border-brand/20 border-t-brand animate-spin mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Loading AquaFeed ERP...</p>
         </div>
       </div>
     );

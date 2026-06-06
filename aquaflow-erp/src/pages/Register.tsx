@@ -5,6 +5,7 @@ import { FormInput } from "@/components/forms";
 import { validationRules, validationMessages } from "@/lib/validations";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useRef } from "react";
+import { AppLogo } from "@/components/AppLogo";
 
 interface RegisterFormData {
   companyName: string;
@@ -90,7 +91,7 @@ export default function Register() {
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="w-full max-w-lg">
         <div className="flex items-center gap-2 mb-8">
-          <img src="/logo.png" alt="AquaFeed ERP Logo" className="w-8 h-8 object-cover rounded-lg" />
+          <AppLogo size="sm" />
           <span className="font-display font-bold text-lg text-foreground">AquaFeed ERP</span>
         </div>
 

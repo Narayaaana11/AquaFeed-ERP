@@ -12,6 +12,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { AppLogo } from "@/components/AppLogo";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -41,16 +42,12 @@ export function Sidebar() {
   return (
     <aside className="hidden sm:flex sm:flex-col fixed left-0 top-0 h-screen w-60 bg-sidebar border-r border-sidebar-border z-30">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border shrink-0">
-        <img
-          src="/favicon.png"
-          alt="AquaFeed ERP"
-          className="w-8 h-8 rounded-lg object-cover"
-        />
+      <NavLink to="/" className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border shrink-0 hover:bg-sidebar-accent/20 transition-colors">
+        <AppLogo size="sm" />
         <span className="font-display font-800 text-base text-black tracking-tight">
           <b>AquaFeed ERP</b>
         </span>
-      </div>
+      </NavLink>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3">
