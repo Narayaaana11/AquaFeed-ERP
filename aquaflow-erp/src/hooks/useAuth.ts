@@ -76,7 +76,8 @@ export function useAuth() {
       setUser(response.data.user);
       navigate('/');
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Registration failed.';
+      const msg = err.response?.data?.message
+        || (err.code === 'ERR_NETWORK' ? 'Cannot connect to the server. Please try again later.' : 'Registration failed.');
       setError(msg);
       throw new Error(msg);
     } finally {

@@ -1,4 +1,3 @@
-import { Fish } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { FormInput } from "@/components/forms";
@@ -35,9 +34,7 @@ export default function Login() {
       {/* Left brand panel */}
       <div className="hidden lg:flex lg:w-1/2 brand-gradient flex-col justify-between p-12">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-            <Fish className="w-5 h-5 text-white" strokeWidth={2.5} />
-          </div>
+          <img src="/logo.png" alt="AquaFeed ERP Logo" className="w-9 h-9 object-cover rounded-xl" />
           <span className="font-display font-bold text-xl text-white">AquaFeed ERP</span>
         </div>
         <div>
@@ -53,7 +50,7 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-2 mb-8">
-            <Fish className="w-6 h-6 text-brand" strokeWidth={2.5} />
+            <img src="/logo.png" alt="AquaFeed ERP Logo" className="w-8 h-8 object-cover rounded-lg" />
             <span className="font-display font-bold text-lg text-foreground">AquaFeed ERP</span>
           </div>
 

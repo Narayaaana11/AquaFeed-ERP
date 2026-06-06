@@ -1,4 +1,4 @@
-import { Fish, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { FormInput } from "@/components/forms";
@@ -90,9 +90,7 @@ export default function Register() {
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="w-full max-w-lg">
         <div className="flex items-center gap-2 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center">
-            <Fish className="w-4 h-4 text-white" strokeWidth={2.5} />
-          </div>
+          <img src="/logo.png" alt="AquaFeed ERP Logo" className="w-8 h-8 object-cover rounded-lg" />
           <span className="font-display font-bold text-lg text-foreground">AquaFeed ERP</span>
         </div>
 

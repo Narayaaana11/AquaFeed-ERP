@@ -1,4 +1,4 @@
-import { Bell, Search, AlertTriangle, Fish } from "lucide-react";
+import { Bell, Search, AlertTriangle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useLowStockProducts } from "@/hooks/useProducts";
 import { useAuth } from "@/hooks/useAuth";
@@ -52,9 +52,11 @@ export function TopNavbar({ title, subtitle }: TopNavbarProps) {
             className="w-8 h-8 rounded-lg object-cover"
           />
         ) : (
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand">
-            <Fish className="w-4 h-4 text-white" strokeWidth={2.5} />
-          </div>
+          <img
+            src="/logo.png"
+            alt="AquaFeed ERP Logo"
+            className="w-8 h-8 rounded-lg object-cover"
+          />
         )}
         <span className="font-display font-bold text-base text-foreground">
           {user?.company?.name || "AquaFlow ERP"}

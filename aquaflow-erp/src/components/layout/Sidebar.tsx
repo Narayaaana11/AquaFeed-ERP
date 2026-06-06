@@ -9,7 +9,6 @@ import {
   Warehouse,
   BarChart2,
   Settings,
-  Fish,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,11 +42,13 @@ export function Sidebar() {
     <aside className="hidden sm:flex sm:flex-col fixed left-0 top-0 h-screen w-60 bg-sidebar border-r border-sidebar-border z-30">
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border shrink-0">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand">
-          <Fish className="w-4 h-4 text-white" strokeWidth={2.5} />
-        </div>
+        <img
+          src="/favicon.png"
+          alt="AquaFeed ERP"
+          className="w-8 h-8 rounded-lg object-cover"
+        />
         <span className="font-display font-800 text-base text-black tracking-tight">
-          <b>AquaFlow ERP</b>
+          <b>AquaFeed ERP</b>
         </span>
       </div>
 

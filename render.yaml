@@ -28,8 +28,8 @@ services:
       # - key: JWT_SECRET
       #   value: <your_strong_random_secret>
 
-      # - key: CORS_ORIGINS
-      #   value: https://your-app.vercel.app
+      - key: CORS_ORIGINS
+        value: https://aqua-feed-erp.vercel.app
 
       - key: JWT_EXPIRES_IN
         value: 7d

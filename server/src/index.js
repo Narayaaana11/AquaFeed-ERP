@@ -29,14 +29,32 @@ connectDB();
 
 // CORS origins configuration
 const allowedOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
+  ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
   : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'];
+
+const allowsVercelPreviews = allowedOrigins.some((o) => {
+  try {
+    return new URL(o).hostname.endsWith('.vercel.app');
+  } catch {
+    return false;
+  }
+});
+
+const isOriginAllowed = (origin) => {
+  if (allowedOrigins.includes(origin)) return true;
+  if (!allowsVercelPreviews) return false;
+  try {
+    return new URL(origin).hostname.endsWith('.vercel.app');
+  } catch {
+    return false;
+  }
+};
 
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+    if (isOriginAllowed(origin) || process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
     callback(new Error(`CORS policy: Origin ${origin} not allowed`));
