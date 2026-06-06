@@ -131,7 +131,7 @@ export function ProductCatalogBrowser({ onSelect, onClose }: ProductCatalogBrows
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 py-2">
               {paged.map((product) => {
-                const hasImgError = imgErrors.has(product.id);
+
                 const isHovered = hoveredId === product.id;
                 return (
                   <button
