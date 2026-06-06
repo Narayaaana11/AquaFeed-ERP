@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, type Customer } from "@/hooks/useCustomers";
 import { useCustomers as useCustomersWebSocket } from "@/hooks/useModuleWebSocket";
+import { createPortal } from "react-dom";
 
 const customerTypes = ["Retail", "Wholesale", "Distributor", "Farm"];
 
@@ -109,41 +110,47 @@ export default function Customers() {
     setSelectedCustomer(null);
   };
 
-  const CustomerForm = ({ reg, submit, errs, isSubmitting, title, onClose }: any) => (
-    <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display font-bold text-lg text-foreground">{title}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+  const CustomerForm = ({ reg, submit, errs, isSubmitting, title, onClose }: any) => {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    if (!mounted) return null;
+    return createPortal(
+      <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+        <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display font-bold text-lg text-foreground">{title}</h2>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+          </div>
+          <form onSubmit={submit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <FormInput label="Customer Name *" placeholder="Ravi Kumar Fisheries" {...reg("name", { required: "Name is required" })} error={errs.name} />
+              </div>
+              <FormInput label="Phone" placeholder="9876543210" {...reg("phone")} />
+              <FormInput label="Email" type="email" placeholder="customer@email.com" {...reg("email")} />
+              <FormInput label="City" placeholder="Vijayawada" {...reg("city")} />
+              <FormInput label="State" placeholder="Andhra Pradesh" {...reg("state")} />
+              <FormSelect label="Type" options={customerTypes.map((t) => ({ value: t, label: t }))} {...reg("type")} />
+              <FormNumber label="Credit Limit (₹)" prefix="₹" placeholder="50000" {...reg("creditLimit")} />
+              <div className="col-span-2">
+                <FormInput label="GST Number" placeholder="22AAAAA0000A1Z5" {...reg("gstNumber")} />
+              </div>
+              <div className="col-span-2">
+                <FormInput label="Address" placeholder="Full address" {...reg("address")} />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button type="button" onClick={onClose} className="flex-1 h-10 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Cancel</button>
+              <button type="submit" disabled={isSubmitting} className="flex-1 h-10 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+                {isSubmitting ? <><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /><span>Saving...</span></> : "Save"}
+              </button>
+            </div>
+          </form>
         </div>
-        <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <FormInput label="Customer Name *" placeholder="Ravi Kumar Fisheries" {...reg("name", { required: "Name is required" })} error={errs.name} />
-            </div>
-            <FormInput label="Phone" placeholder="9876543210" {...reg("phone")} />
-            <FormInput label="Email" type="email" placeholder="customer@email.com" {...reg("email")} />
-            <FormInput label="City" placeholder="Vijayawada" {...reg("city")} />
-            <FormInput label="State" placeholder="Andhra Pradesh" {...reg("state")} />
-            <FormSelect label="Type" options={customerTypes.map((t) => ({ value: t, label: t }))} {...reg("type")} />
-            <FormNumber label="Credit Limit (₹)" prefix="₹" placeholder="50000" {...reg("creditLimit")} />
-            <div className="col-span-2">
-              <FormInput label="GST Number" placeholder="22AAAAA0000A1Z5" {...reg("gstNumber")} />
-            </div>
-            <div className="col-span-2">
-              <FormInput label="Address" placeholder="Full address" {...reg("address")} />
-            </div>
-          </div>
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 h-10 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Cancel</button>
-            <button type="submit" disabled={isSubmitting} className="flex-1 h-10 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
-              {isSubmitting ? <><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /><span>Saving...</span></> : "Save"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+      </div>,
+      document.body
+    );
+  };
 
   return (
     <AppLayout title="Customers" subtitle="Manage customer accounts and credit">

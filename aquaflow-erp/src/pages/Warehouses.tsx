@@ -5,7 +5,8 @@ import { EmptyState } from "@/components/StatusBadge";
 import { FormInput, FormNumber } from "@/components/forms";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Plus, Warehouse as WarehouseIcon, Pencil, Trash2, X, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { useWarehouses, useCreateWarehouse, useUpdateWarehouse, useDeleteWarehouse, type Warehouse } from "@/hooks/useWarehouses";
 
@@ -75,9 +76,13 @@ export default function Warehouses() {
     setSelectedWarehouse(null);
   };
 
-  const WarehouseForm = ({ reg, submit, errs, isSubmitting, title, onClose }: any) => (
-    <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+  const WarehouseForm = ({ reg, submit, errs, isSubmitting, title, onClose }: any) => {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    if (!mounted) return null;
+    return createPortal(
+      <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+        <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display font-bold text-lg text-foreground">{title}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
@@ -109,8 +114,10 @@ export default function Warehouses() {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
+};
 
   return (
     <AppLayout title="Warehouses" subtitle="Manage storage locations">

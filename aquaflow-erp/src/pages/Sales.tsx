@@ -4,7 +4,8 @@ import { DataTable } from "@/components/ui/data-table";
 import { StatusBadge, EmptyState } from "@/components/StatusBadge";
 import { FormSelect } from "@/components/forms";
 import { Plus, Eye, Download, FileText, Search, X, Trash2, CheckCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useSales, useCreateInvoice, useUpdateInvoiceStatus, type Invoice } from "@/hooks/useSales";
 import { useCustomers } from "@/hooks/useCustomers";
@@ -25,6 +26,8 @@ export default function Sales() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const { data: salesData, isLoading, refetch } = useSales({
     search: searchQuery || undefined,
@@ -232,8 +235,8 @@ export default function Sales() {
       )}
 
       {/* Create Invoice Modal */}
-      {isCreateOpen && (
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {mounted && isCreateOpen && createPortal(
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
           <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-display font-bold text-lg text-foreground">Create Invoice</h2>
@@ -357,12 +360,13 @@ export default function Sales() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* View Invoice Modal */}
-      {isViewOpen && selectedInvoice && (
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {mounted && isViewOpen && selectedInvoice && createPortal(
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
           <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -445,7 +449,8 @@ export default function Sales() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </AppLayout>
   );

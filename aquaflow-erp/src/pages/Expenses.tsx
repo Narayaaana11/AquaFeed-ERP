@@ -5,10 +5,11 @@ import { StatusBadge, EmptyState } from "@/components/StatusBadge";
 import { FormInput, FormSelect, FormNumber } from "@/components/forms";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Plus, Search, Receipt, Pencil, Trash2, X, CheckCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useExpenses, useCreateExpense, useUpdateExpense, useApproveExpense, useDeleteExpense, type Expense } from "@/hooks/useExpenses";
 import { useExpenses as useExpensesWebSocket } from "@/hooks/useModuleWebSocket";
+import { createPortal } from "react-dom";
 
 const EXPENSE_CATEGORIES = ["Transport", "Staff Salary", "Packaging", "Electricity", "Rent", "Repairs", "Maintenance", "Other"];
 const PAYMENT_METHODS = ["Cash", "UPI", "Cheque", "Bank Transfer"];
@@ -99,36 +100,42 @@ export default function Expenses() {
     setSelectedExpense(null);
   };
 
-  const ExpenseForm = ({ reg, submit, errs, isSubmitting, title, onClose }: any) => (
-    <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display font-bold text-lg text-foreground">{title}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+  const ExpenseForm = ({ reg, submit, errs, isSubmitting, title, onClose }: any) => {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    if (!mounted) return null;
+    return createPortal(
+      <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+        <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display font-bold text-lg text-foreground">{title}</h2>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+          </div>
+          <form onSubmit={submit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormSelect label="Category *" options={EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))} {...reg("category", { required: "Required" })} error={errs.category} />
+              <FormNumber label="Amount (₹) *" prefix="₹" placeholder="5000" {...reg("amount", { required: "Required", valueAsNumber: true, min: { value: 1, message: "Must be > 0" } })} error={errs.amount} />
+              <FormInput label="Date *" type="date" {...reg("date", { required: "Required" })} error={errs.date} />
+              <FormSelect label="Payment Method" options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))} {...reg("paymentMethod")} />
+              <div className="col-span-2">
+                <FormInput label="Description" placeholder="Brief description" {...reg("description")} />
+              </div>
+              <div className="col-span-2">
+                <FormInput label="Reference (optional)" placeholder="Bill no., receipt no…" {...reg("reference")} />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button type="button" onClick={onClose} className="flex-1 h-10 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Cancel</button>
+              <button type="submit" disabled={isSubmitting} className="flex-1 h-10 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+                {isSubmitting ? <><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /><span>Saving...</span></> : "Save Expense"}
+              </button>
+            </div>
+          </form>
         </div>
-        <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormSelect label="Category *" options={EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))} {...reg("category", { required: "Required" })} error={errs.category} />
-            <FormNumber label="Amount (₹) *" prefix="₹" placeholder="5000" {...reg("amount", { required: "Required", valueAsNumber: true, min: { value: 1, message: "Must be > 0" } })} error={errs.amount} />
-            <FormInput label="Date *" type="date" {...reg("date", { required: "Required" })} error={errs.date} />
-            <FormSelect label="Payment Method" options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))} {...reg("paymentMethod")} />
-            <div className="col-span-2">
-              <FormInput label="Description" placeholder="Brief description" {...reg("description")} />
-            </div>
-            <div className="col-span-2">
-              <FormInput label="Reference (optional)" placeholder="Bill no., receipt no…" {...reg("reference")} />
-            </div>
-          </div>
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 h-10 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Cancel</button>
-            <button type="submit" disabled={isSubmitting} className="flex-1 h-10 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
-              {isSubmitting ? <><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /><span>Saving...</span></> : "Save Expense"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+      </div>,
+      document.body
+    );
+  };
 
   return (
     <AppLayout title="Expenses" subtitle="Track and manage business expenses">

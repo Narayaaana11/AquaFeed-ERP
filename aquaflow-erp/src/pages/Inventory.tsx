@@ -3,7 +3,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DataTable } from "@/components/ui/data-table";
 import { FormSelect, FormNumber } from "@/components/forms";
 import { Plus, TrendingUp, TrendingDown, Package2, X, AlertTriangle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { validationRules } from "@/lib/validations";
 import { useInventory, useAdjustInventory, useStockAdjustments } from "@/hooks/useInventory";
@@ -21,6 +22,8 @@ export default function Inventory() {
   const [stockFilter, setStockFilter] = useState("All");
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
   const [tab, setTab] = useState<"stock" | "movements">("stock");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const { data: inventory = [], isLoading, refetch: refetchInventory } = useInventory({
     stockStatus: stockFilter === "Low Stock" ? "low_stock" : stockFilter === "Out of Stock" ? "out_of_stock" : undefined,
@@ -241,8 +244,8 @@ export default function Inventory() {
       )}
 
       {/* Adjust Stock Modal */}
-      {isAdjustOpen && (
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {mounted && isAdjustOpen && createPortal(
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
           <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display font-bold text-lg text-foreground">Adjust Stock</h2>
@@ -302,7 +305,8 @@ export default function Inventory() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </AppLayout>
   );

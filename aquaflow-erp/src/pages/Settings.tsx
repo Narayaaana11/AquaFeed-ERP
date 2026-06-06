@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { FormInput, FormSelect } from "@/components/forms";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -57,6 +58,8 @@ export default function Settings() {
   const isOwner = currentUser?.role === 'Owner';
 
   const [tab, setTab] = useState<Tab>("Company");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
   const [isEditEmployeeOpen, setIsEditEmployeeOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -530,8 +533,8 @@ export default function Settings() {
       )}
 
       {/* Add Employee Modal */}
-      {isAddEmployeeOpen && (
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {mounted && isAddEmployeeOpen && createPortal(
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
           <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display font-bold text-lg text-foreground">
@@ -609,7 +612,8 @@ export default function Settings() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Edit Employee Modal */}
@@ -699,7 +703,8 @@ export default function Settings() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirmation */}
@@ -718,8 +723,8 @@ export default function Settings() {
       />
 
       {/* Clear Data — Password Prompt Modal (Owner Only) */}
-      {isClearConfirmOpen && (
-        <div className="fixed inset-0 bg-foreground/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {mounted && isClearConfirmOpen && createPortal(
+        <div className="fixed inset-0 bg-foreground/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
           <div className="bg-surface rounded-2xl border border-destructive/30 shadow-panel w-full max-w-md p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
@@ -797,7 +802,8 @@ export default function Settings() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </AppLayout>
   );
