@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Search, X, CheckCircle2, ChevronLeft, ChevronRight, Tag, Weight, Ruler } from "lucide-react";
 import { AP_CATALOG, CATALOG_BRANDS, CATALOG_CATEGORIES, type CatalogProduct } from "@/data/apAquaCatalog";
 
@@ -30,6 +31,9 @@ export function ProductCatalogBrowser({ onSelect, onClose }: ProductCatalogBrows
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return AP_CATALOG.filter((p) => {
@@ -57,8 +61,10 @@ export function ProductCatalogBrowser({ onSelect, onClose }: ProductCatalogBrows
     setImgErrors((prev) => new Set(prev).add(id));
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[60] p-0 sm:p-4">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
       <div className="bg-surface w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl border border-border shadow-panel flex flex-col max-h-[95vh] sm:max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border shrink-0">
@@ -252,6 +258,7 @@ export function ProductCatalogBrowser({ onSelect, onClose }: ProductCatalogBrows
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

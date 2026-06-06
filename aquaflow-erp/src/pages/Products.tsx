@@ -17,7 +17,12 @@ import {
 } from "@/hooks/useProducts";
 import { useProducts as useProductsWebSocket } from "@/hooks/useModuleWebSocket";
 import { LOW_STOCK_THRESHOLD } from "@/lib/formatters";
-import type { CatalogProduct } from "@/data/apAquaCatalog";
+import { AP_CATALOG, type CatalogProduct } from "@/data/apAquaCatalog";
+import { createPortal } from "react-dom";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
@@ -56,6 +61,52 @@ const categoryColors: Record<string, string> = {
 
 function getCatClass(cat: string) {
   return categoryColors[cat] || "bg-gray-100 text-gray-700";
+}
+
+function ProductSearchCombobox({ onSelect }: { onSelect: (p: CatalogProduct) => void }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full flex items-center justify-between h-10 px-3 rounded-xl border border-border bg-background text-sm text-muted-foreground hover:bg-secondary/50 transition-colors"
+        >
+          Search catalog to auto-fill...
+          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
+        <Command>
+          <CommandInput placeholder="Search AP catalog..." />
+          <CommandList>
+            <CommandEmpty>No product found.</CommandEmpty>
+            <CommandGroup>
+              {AP_CATALOG.map((product) => (
+                <CommandItem
+                  key={product.id}
+                  value={product.name + " " + product.brand}
+                  onSelect={() => {
+                    setOpen(false);
+                    onSelect(product);
+                  }}
+                  className="cursor-pointer"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium text-foreground">{product.name}</span>
+                    <span className="text-xs text-muted-foreground">{product.brand} · {product.category}</span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 function ProductImage({ product }: { product: Product }) {
@@ -482,8 +533,8 @@ export default function Products() {
       )}
 
       {/* Add Product Modal */}
-      {isAddOpen && (
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      {isAddOpen && createPortal(
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
           <div className="bg-surface w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl border border-border shadow-panel max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
               <div>
@@ -503,6 +554,14 @@ export default function Products() {
                 </button>
               </div>
             </div>
+            
+            <div className="px-5 pt-4 pb-2 border-b border-border bg-muted/20">
+              <label className="text-xs font-display font-semibold text-foreground mb-1.5 block">
+                Quick Fill
+              </label>
+              <ProductSearchCombobox onSelect={handleCatalogSelect} />
+            </div>
+
             <form onSubmit={handleAddSubmit(onAddSubmit)} className="p-5 space-y-4">
               <FormInput
                 label="Product Name"
@@ -572,12 +631,13 @@ export default function Products() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Edit Product Modal */}
-      {isEditOpen && selectedProduct && (
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      {isEditOpen && selectedProduct && createPortal(
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
           <div className="bg-surface w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl border border-border shadow-panel max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
               <div className="flex items-center gap-3">
@@ -591,6 +651,14 @@ export default function Products() {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            <div className="px-5 pt-4 pb-2 border-b border-border bg-muted/20">
+              <label className="text-xs font-display font-semibold text-foreground mb-1.5 block">
+                Update from Catalog
+              </label>
+              <ProductSearchCombobox onSelect={handleCatalogSelect} />
+            </div>
+
             <form onSubmit={handleEditSubmit(onEditSubmit)} className="p-5 space-y-4">
               <FormInput label="Product Name" {...registerEdit("name", validationRules.productName)} error={editErrors.name} />
               <div className="grid grid-cols-2 gap-3">
@@ -619,7 +687,8 @@ export default function Products() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <ConfirmDialog
