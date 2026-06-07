@@ -294,7 +294,7 @@ export default function Sales() {
                 <FormSelect
                   label="Customer *"
                   options={customers.map((c) => ({ value: c._id, label: `${c.name}${c.outstandingBalance > 0 ? ` (₹${c.outstandingBalance.toLocaleString("en-IN")} outstanding)` : ""}` }))}
-                  {...register("customerId", { required: "Customer is required" })}
+                  name="customerId" control={control} required
                   error={errors.customerId}
                 />
                 <FormSelect

@@ -65,10 +65,10 @@ export default function Customers() {
   const updateCustomer = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
 
-  const { register: registerAdd, handleSubmit: handleAddSubmit, reset: resetAdd, formState: { errors: addErrors } } =
+  const { register: registerAdd, control: controlAdd, handleSubmit: handleAddSubmit, reset: resetAdd, formState: { errors: addErrors } } =
     useForm<CustomerFormData>({ mode: "onBlur" });
 
-  const { register: registerEdit, handleSubmit: handleEditSubmit, reset: resetEdit, formState: { errors: editErrors } } =
+  const { register: registerEdit, control: controlEdit, handleSubmit: handleEditSubmit, reset: resetEdit, formState: { errors: editErrors } } =
     useForm<CustomerFormData>({ mode: "onBlur" });
 
   const totalOutstanding = customers.reduce((sum, c) => sum + (c.outstandingBalance || 0), 0);
@@ -112,7 +112,7 @@ export default function Customers() {
     setSelectedCustomer(null);
   };
 
-  const CustomerForm = ({ reg, submit, errs, isSubmitting, title, onClose }: any) => {
+  const CustomerForm = ({ reg, control, submit, errs, isSubmitting, title, onClose }: any) => {
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
     if (!mounted) return null;
@@ -132,7 +132,7 @@ export default function Customers() {
               <FormInput label="Email" type="email" placeholder="customer@email.com" {...reg("email")} />
               <FormInput label="City" placeholder="Vijayawada" {...reg("city")} />
               <FormInput label="State" placeholder="Andhra Pradesh" {...reg("state")} />
-              <FormSelect label="Type" options={customerTypes.map((t) => ({ value: t, label: t }))} {...reg("type")} />
+              <FormSelect label="Type" options={customerTypes.map((t) => ({ value: t, label: t }))} name="type" control={control} />
               <FormNumber label="Credit Limit (₹)" prefix="₹" placeholder="50000" {...reg("creditLimit")} />
               <div className="col-span-2">
                 <FormInput label="GST Number" placeholder="22AAAAA0000A1Z5" {...reg("gstNumber")} />
@@ -255,6 +255,7 @@ export default function Customers() {
       {isAddOpen && (
         <CustomerForm
           reg={registerAdd}
+          control={controlAdd}
           submit={handleAddSubmit(onAddSubmit)}
           errs={addErrors}
           isSubmitting={createCustomer.isPending}
@@ -266,6 +267,7 @@ export default function Customers() {
       {isEditOpen && selectedCustomer && (
         <CustomerForm
           reg={registerEdit}
+          control={controlEdit}
           submit={handleEditSubmit(onEditSubmit)}
           errs={editErrors}
           isSubmitting={updateCustomer.isPending}

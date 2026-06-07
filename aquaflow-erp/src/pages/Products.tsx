@@ -186,11 +186,11 @@ export default function Products() {
     (p) => p.stock < (p.lowStockThreshold || LOW_STOCK_THRESHOLD)
   ).length;
 
-  const { register: registerAdd, handleSubmit: handleAddSubmit, reset: resetAdd,
+  const { register: registerAdd, control: controlAdd, handleSubmit: handleAddSubmit, reset: resetAdd,
     setValue: setAddValue, formState: { errors: addErrors } } =
     useForm<ProductFormData>({ mode: "onBlur" });
 
-  const { register: registerEdit, handleSubmit: handleEditSubmit, reset: resetEdit,
+  const { register: registerEdit, control: controlEdit, handleSubmit: handleEditSubmit, reset: resetEdit,
     formState: { errors: editErrors } } =
     useForm<ProductFormData>({ mode: "onBlur" });
 
@@ -584,13 +584,13 @@ export default function Products() {
                 <FormSelect
                   label="Brand"
                   options={brands.map((b) => ({ value: b, label: b }))}
-                  {...registerAdd("brand", { required: "Brand is required" })}
+                  name="brand" control={controlAdd} required
                   error={addErrors.brand}
                 />
                 <FormSelect
                   label="Category"
                   options={categories.map((c) => ({ value: c, label: c }))}
-                  {...registerAdd("category")}
+                  name="category" control={controlAdd}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -673,8 +673,8 @@ export default function Products() {
             <form onSubmit={handleEditSubmit(onEditSubmit)} className="p-5 space-y-4">
               <FormInput label="Product Name" {...registerEdit("name", validationRules.productName)} error={editErrors.name} />
               <div className="grid grid-cols-2 gap-3">
-                <FormSelect label="Brand" options={brands.map((b) => ({ value: b, label: b }))} {...registerEdit("brand", { required: "Required" })} error={editErrors.brand} />
-                <FormSelect label="Category" options={categories.map((c) => ({ value: c, label: c }))} {...registerEdit("category")} />
+                <FormSelect label="Brand" options={brands.map((b) => ({ value: b, label: b }))} name="brand" control={controlEdit} required error={editErrors.brand} />
+                <FormSelect label="Category" options={categories.map((c) => ({ value: c, label: c }))} name="category" control={controlEdit} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <FormInput label="Pellet Size" {...registerEdit("pelletSize")} />

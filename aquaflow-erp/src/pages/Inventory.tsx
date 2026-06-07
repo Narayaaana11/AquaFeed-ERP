@@ -59,7 +59,7 @@ export default function Inventory() {
   const { data: products = [] } = useProducts();
   const adjustInventory = useAdjustInventory();
 
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<StockAdjustmentData>({ mode: "onBlur", defaultValues: { type: "add" } });
+  const { register, control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<StockAdjustmentData>({ mode: "onBlur", defaultValues: { type: "add" } });
 
   const selectedProductId = watch("productId");
   const adjustmentType = watch("type");
@@ -360,13 +360,13 @@ export default function Inventory() {
                   <FormSelect
                     label="From Warehouse *"
                     options={warehouses.map((w) => ({ value: w._id, label: w.name }))}
-                    {...register("fromWarehouseId", { required: adjustmentType === "transfer" ? "Required" : false })}
+                    name="fromWarehouseId" control={control} required={adjustmentType === "transfer"}
                     error={errors.fromWarehouseId}
                   />
                   <FormSelect
                     label="To Warehouse *"
                     options={warehouses.map((w) => ({ value: w._id, label: w.name }))}
-                    {...register("toWarehouseId", { required: adjustmentType === "transfer" ? "Required" : false })}
+                    name="toWarehouseId" control={control} required={adjustmentType === "transfer"}
                     error={errors.toWarehouseId}
                   />
                 </div>

@@ -136,6 +136,7 @@ export default function Settings() {
   // Add employee form
   const {
     register: registerAddEmployee,
+    control: controlAddEmployee,
     handleSubmit: handleAddEmployeeSubmit,
     reset: resetAddEmployee,
     formState: { errors: addEmployeeErrors },
@@ -144,6 +145,7 @@ export default function Settings() {
   // Edit employee form
   const {
     register: registerEditEmployee,
+    control: controlEditEmployee,
     handleSubmit: handleEditEmployeeSubmit,
     reset: resetEditEmployee,
     formState: { errors: editEmployeeErrors },
@@ -580,9 +582,7 @@ export default function Settings() {
               <FormSelect
                 label="Role"
                 options={roles.map((r) => ({ value: r, label: r }))}
-                {...registerAddEmployee("role", {
-                  required: "Role is required",
-                })}
+                name="role" control={controlAddEmployee} required
                 error={addEmployeeErrors.role}
               />
 
@@ -655,9 +655,7 @@ export default function Settings() {
                 label="Role"
                 options={roles.map((r) => ({ value: r, label: r }))}
                 defaultValue={selectedEmployee.role}
-                {...registerEditEmployee("role", {
-                  required: "Role is required",
-                })}
+                name="role" control={controlEditEmployee} required
                 error={editEmployeeErrors.role}
               />
 

@@ -61,8 +61,8 @@ export default function Expenses() {
   const approveExpense = useApproveExpense();
   const deleteExpense = useDeleteExpense();
 
-  const { register: regAdd, handleSubmit: handleAddSubmit, reset: resetAdd, formState: { errors: addErrors } } = useForm<ExpenseFormData>({ mode: "onBlur", defaultValues: { date: new Date().toISOString().split("T")[0], category: "Transport", paymentMethod: "Cash" } });
-  const { register: regEdit, handleSubmit: handleEditSubmit, reset: resetEdit, formState: { errors: editErrors } } = useForm<ExpenseFormData>({ mode: "onBlur" });
+  const { register: regAdd, control: controlAdd, handleSubmit: handleAddSubmit, reset: resetAdd, formState: { errors: addErrors } } = useForm<ExpenseFormData>({ mode: "onBlur", defaultValues: { date: new Date().toISOString().split("T")[0], category: "Transport", paymentMethod: "Cash" } });
+  const { register: regEdit, control: controlEdit, handleSubmit: handleEditSubmit, reset: resetEdit, formState: { errors: editErrors } } = useForm<ExpenseFormData>({ mode: "onBlur" });
 
   const totalExpenses = expenses.filter((e) => e.status === "Approved").reduce((sum, e) => sum + e.amount, 0);
   const pendingCount = expenses.filter((e) => e.status === "Pending Approval").length;
@@ -101,7 +101,7 @@ export default function Expenses() {
     setSelectedExpense(null);
   };
 
-  const ExpenseForm = ({ reg, submit, errs, isSubmitting, title, onClose }: any) => {
+  const ExpenseForm = ({ reg, control, submit, errs, isSubmitting, title, onClose }: any) => {
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
     if (!mounted) return null;
@@ -114,10 +114,10 @@ export default function Expenses() {
           </div>
           <form onSubmit={submit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormSelect label="Category *" options={EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))} {...reg("category", { required: "Required" })} error={errs.category} />
+              <FormSelect label="Category *" options={EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))} name="category" control={control} required error={errs.category} />
               <FormNumber label="Amount (₹) *" prefix="₹" placeholder="5000" {...reg("amount", { required: "Required", valueAsNumber: true, min: { value: 1, message: "Must be > 0" } })} error={errs.amount} />
               <FormInput label="Date *" type="date" {...reg("date", { required: "Required" })} error={errs.date} />
-              <FormSelect label="Payment Method" options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))} {...reg("paymentMethod")} />
+              <FormSelect label="Payment Method" options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))} name="paymentMethod" control={control} />
               <div className="col-span-2">
                 <FormInput label="Description" placeholder="Brief description" {...reg("description")} />
               </div>
@@ -245,8 +245,8 @@ export default function Expenses() {
         />
       )}
 
-      {isAddOpen && <ExpenseForm reg={regAdd} submit={handleAddSubmit(onAddSubmit)} errs={addErrors} isSubmitting={createExpense.isPending} title="Add Expense" onClose={() => setIsAddOpen(false)} />}
-      {isEditOpen && selectedExpense && <ExpenseForm reg={regEdit} submit={handleEditSubmit(onEditSubmit)} errs={editErrors} isSubmitting={updateExpense.isPending} title="Edit Expense" onClose={() => { setIsEditOpen(false); setSelectedExpense(null); }} />}
+      {isAddOpen && <ExpenseForm reg={regAdd} control={controlAdd} submit={handleAddSubmit(onAddSubmit)} errs={addErrors} isSubmitting={createExpense.isPending} title="Add Expense" onClose={() => setIsAddOpen(false)} />}
+      {isEditOpen && selectedExpense && <ExpenseForm reg={regEdit} control={controlEdit} submit={handleEditSubmit(onEditSubmit)} errs={editErrors} isSubmitting={updateExpense.isPending} title="Edit Expense" onClose={() => { setIsEditOpen(false); setSelectedExpense(null); }} />}
 
       <ConfirmDialog
         isOpen={isDeleteOpen}
