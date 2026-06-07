@@ -87,7 +87,7 @@ export function useCreateInvoice() {
         toast.success(`Invoice ${data.invoiceNumber} created!`, {
           action: {
             label: 'WhatsApp',
-            onClick: () => openWhatsApp(phone, getInvoiceMessage(data.customerName, data.invoiceNumber, data.total, balance))
+            onClick: () => openWhatsApp(phone, getInvoiceMessage(data))
           },
           duration: 10000,
         });
@@ -148,7 +148,7 @@ export function useAddInvoicePayment() {
         toast.success('Payment added successfully!', {
           action: {
             label: 'WhatsApp',
-            onClick: () => openWhatsApp(phone, getPaymentMessage(data.customerName, variables.amount, data.invoiceNumber, balance))
+            onClick: () => openWhatsApp(phone, getPaymentMessage(data, variables.amount))
           },
           duration: 10000,
         });

@@ -25,20 +25,35 @@ export const openWhatsApp = (phone: string, text: string) => {
   }
 };
 
-export const getInvoiceMessage = (
-  customerName: string,
-  invoiceNumber: string,
-  totalAmount: number,
-  balanceAmount: number
-): string => {
+export const getInvoiceMessage = (invoice: any): string => {
+  const customerName = invoice.customerName || "Customer";
+  const balanceAmount = invoice.total - (invoice.paidAmount || 0);
+
+  let itemsText = "";
+  if (invoice.items && invoice.items.length > 0) {
+    itemsText = "\n*Items Purchased:*\n" + invoice.items.map((i: any) => 
+      `• ${i.productName} (x${i.quantity}) - ₹${i.lineTotal.toLocaleString('en-IN')}`
+    ).join("\n") + "\n";
+  }
+
+  let paymentsText = "";
+  if (invoice.payments && invoice.payments.length > 0) {
+    paymentsText = "\n*Payment History:*\n" + invoice.payments.map((p: any) => 
+      `• ₹${p.amount.toLocaleString('en-IN')} (${p.paymentType}) on ${new Date(p.date || Date.now()).toLocaleDateString('en-IN')}`
+    ).join("\n") + "\n";
+  }
+
   return `Dear ${customerName},
 
 Thank you for your business with AP Aquaculture!
 Here are the details for your recent purchase:
 
-*Invoice No:* ${invoiceNumber}
-*Total Amount:* ₹${totalAmount.toLocaleString('en-IN')}
-${balanceAmount > 0 ? `*Pending Balance on this Invoice:* ₹${balanceAmount.toLocaleString('en-IN')}\n` : '*Status:* Fully Paid ✅\n'}
+*Invoice No:* ${invoice.invoiceNumber}
+*Date:* ${new Date(invoice.createdAt).toLocaleDateString('en-IN')}
+${itemsText}
+*Total Amount:* ₹${invoice.total.toLocaleString('en-IN')}
+*Amount Paid:* ₹${(invoice.paidAmount || 0).toLocaleString('en-IN')}${paymentsText}
+${balanceAmount > 0 ? `*Pending Balance:* ₹${balanceAmount.toLocaleString('en-IN')}\n` : '*Status:* Fully Paid ✅\n'}
 If you have any questions, feel free to reply to this message.
 
 Best regards,
@@ -46,16 +61,25 @@ AP Aquaculture Team`;
 };
 
 export const getPaymentMessage = (
-  customerName: string,
-  paymentAmount: number,
-  invoiceNumber: string,
-  newBalance: number
+  invoice: any,
+  paymentAmount: number
 ): string => {
+  const customerName = invoice.customerName || "Customer";
+  const newBalance = invoice.total - (invoice.paidAmount || 0);
+
+  let paymentsText = "";
+  if (invoice.payments && invoice.payments.length > 0) {
+    paymentsText = "\n*All Payments Received:*\n" + invoice.payments.map((p: any) => 
+      `• ₹${p.amount.toLocaleString('en-IN')} (${p.paymentType}) on ${new Date(p.date || Date.now()).toLocaleDateString('en-IN')}`
+    ).join("\n") + "\n";
+  }
+
   return `Dear ${customerName},
 
-We have successfully received your payment of *₹${paymentAmount.toLocaleString('en-IN')}* towards Invoice ${invoiceNumber}.
-
-*Remaining Balance on this Invoice:* ₹${newBalance.toLocaleString('en-IN')}
+We have successfully received your recent payment of *₹${paymentAmount.toLocaleString('en-IN')}* towards Invoice ${invoice.invoiceNumber}.
+${paymentsText}
+*Total Invoice Amount:* ₹${invoice.total.toLocaleString('en-IN')}
+*Remaining Balance:* ₹${newBalance.toLocaleString('en-IN')}
 
 Thank you for your prompt payment!
 

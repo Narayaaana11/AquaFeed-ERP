@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DataTable } from "@/components/ui/data-table";
 import { StatusBadge, EmptyState } from "@/components/StatusBadge";
 import { FormSelect } from "@/components/forms";
-import { Plus, Eye, Download, FileText, Search, X, Trash2, CheckCircle } from "lucide-react";
+import { Plus, Eye, Download, FileText, Search, X, Trash2, CheckCircle, Check, ChevronsUpDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -13,7 +13,9 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { useProducts } from "@/hooks/useProducts";
 import { useSales as useSalesWebSocket } from "@/hooks/useModuleWebSocket";
 import { toast } from "sonner";
-
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 interface CreateInvoiceFormData {
   customerId: string;
   paymentType: string;
@@ -31,6 +33,7 @@ export default function Sales() {
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [isCustomerComboboxOpen, setIsCustomerComboboxOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -291,12 +294,67 @@ export default function Sales() {
 
             <form onSubmit={handleSubmit(onCreateSubmit)} className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
-                <FormSelect
-                  label="Customer *"
-                  options={customers.map((c) => ({ value: c._id, label: `${c.name}${c.outstandingBalance > 0 ? ` (₹${c.outstandingBalance.toLocaleString("en-IN")} outstanding)` : ""}` }))}
-                  name="customerId" control={control} required
-                  error={errors.customerId}
-                />
+                <div className="space-y-1.5">
+                  <label className="text-sm font-display font-medium text-foreground">Customer <span className="text-destructive">*</span></label>
+                  <Popover open={isCustomerComboboxOpen} onOpenChange={setIsCustomerComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        role="combobox"
+                        aria-expanded={isCustomerComboboxOpen}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded-md border h-10 px-3 py-2 text-sm",
+                          errors.customerId ? "border-destructive focus:ring-destructive/50" : "border-input bg-background focus:ring-brand/50",
+                          !watch("customerId") && "text-muted-foreground"
+                        )}
+                      >
+                        <span className="truncate">
+                          {watch("customerId")
+                            ? (() => {
+                                const c = customers.find((c) => c._id === watch("customerId"));
+                                return c ? `${c.name}${c.outstandingBalance > 0 ? ` (₹${c.outstandingBalance.toLocaleString("en-IN")} outstanding)` : ""}` : "Select customer...";
+                              })()
+                            : "Select customer..."}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[380px] p-0 z-[100]" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search customers..." />
+                        <CommandList>
+                          <CommandEmpty>No customer found.</CommandEmpty>
+                          <CommandGroup>
+                            {customers.map((c) => (
+                              <CommandItem
+                                key={c._id}
+                                value={`${c.name} ${c.phone} ${c._id}`}
+                                onSelect={() => {
+                                  setValue("customerId", c._id, { shouldValidate: true });
+                                  setIsCustomerComboboxOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    watch("customerId") === c._id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{c.name}</span>
+                                  {c.phone && <span className="text-xs text-muted-foreground">{c.phone}</span>}
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {errors.customerId && (
+                    <p className="text-xs text-destructive">{errors.customerId.message}</p>
+                  )}
+                </div>
                 <FormSelect
                   label="Payment Type"
                   options={[
