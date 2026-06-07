@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Search, X, CheckCircle2, ChevronLeft, ChevronRight, Tag, Weight, Ruler } from "lucide-react";

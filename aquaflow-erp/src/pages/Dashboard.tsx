@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/StatusBadge";
