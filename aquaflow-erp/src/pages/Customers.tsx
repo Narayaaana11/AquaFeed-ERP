@@ -5,12 +5,13 @@ import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/StatusBadge";
 import { FormInput, FormSelect, FormNumber } from "@/components/forms";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Search, Plus, Pencil, Trash2, Users, X, AlertTriangle } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Users, X, AlertTriangle, MessageCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, type Customer } from "@/hooks/useCustomers";
 import { useCustomers as useCustomersWebSocket } from "@/hooks/useModuleWebSocket";
 import { createPortal } from "react-dom";
+import { openWhatsApp, getReminderMessage } from "@/utils/whatsapp";
 
 const customerTypes = ["Retail", "Wholesale", "Distributor", "Farm"];
 
@@ -233,6 +234,11 @@ export default function Customers() {
               header: "Actions",
               cell: (r) => (
                 <div className="flex items-center gap-2">
+                  {r.phone && r.outstandingBalance > 0 && (
+                    <button onClick={() => openWhatsApp(r.phone!, getReminderMessage(r.name, r.outstandingBalance))} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-emerald-600 hover:bg-emerald-50 transition-colors">
+                      <MessageCircle className="w-3.5 h-3.5" /> Reminder
+                    </button>
+                  )}
                   <button onClick={() => handleEdit(r)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors">
                     <Pencil className="w-3.5 h-3.5" /> Edit
                   </button>

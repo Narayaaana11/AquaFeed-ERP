@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { openWhatsApp, getInvoiceMessage, getPaymentMessage } from '@/utils/whatsapp';
 
 export interface InvoiceItem {
   product: string;
@@ -77,7 +78,22 @@ export function useCreateInvoice() {
       qc.invalidateQueries({ queryKey: ['customers'] });
       qc.invalidateQueries({ queryKey: ['reports'] });
       qc.invalidateQueries({ queryKey: ['inventory'] });
-      toast.success(`Invoice ${data.invoiceNumber} created!`);
+      
+      const customerObj = typeof data.customer === 'object' ? data.customer : null;
+      const phone = customerObj && 'phone' in customerObj ? customerObj.phone : null;
+      const balance = data.total - (data.paidAmount || 0);
+
+      if (phone) {
+        toast.success(`Invoice ${data.invoiceNumber} created!`, {
+          action: {
+            label: 'WhatsApp',
+            onClick: () => openWhatsApp(phone, getInvoiceMessage(data.customerName, data.invoiceNumber, data.total, balance))
+          },
+          duration: 10000,
+        });
+      } else {
+        toast.success(`Invoice ${data.invoiceNumber} created!`);
+      }
     },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to create invoice'),
   });
@@ -120,10 +136,25 @@ export function useAddInvoicePayment() {
       const { data } = await api.post(`/sales/${id}/payments`, { amount, paymentType });
       return data.data as Invoice;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       qc.invalidateQueries({ queryKey: ['sales'] });
       qc.invalidateQueries({ queryKey: ['customers'] });
-      toast.success('Payment added successfully!');
+      
+      const customerObj = typeof data.customer === 'object' ? data.customer : null;
+      const phone = customerObj && 'phone' in customerObj ? customerObj.phone : null;
+      const balance = data.total - (data.paidAmount || 0);
+
+      if (phone) {
+        toast.success('Payment added successfully!', {
+          action: {
+            label: 'WhatsApp',
+            onClick: () => openWhatsApp(phone, getPaymentMessage(data.customerName, variables.amount, data.invoiceNumber, balance))
+          },
+          duration: 10000,
+        });
+      } else {
+        toast.success('Payment added successfully!');
+      }
     },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to add payment'),
   });

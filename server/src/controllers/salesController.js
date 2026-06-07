@@ -295,7 +295,9 @@ const addPayment = async (req, res, next) => {
       emitInvoicePaid(io, req.companyId, invoice);
     }
 
-    res.json({ success: true, data: invoice });
+    const populated = await Invoice.findById(invoice._id).populate('customer', 'name phone');
+
+    res.json({ success: true, data: populated });
   } catch (err) {
     next(err);
   }
