@@ -95,26 +95,36 @@ export function ProductCatalogBrowser({ onSelect, onClose }: ProductCatalogBrows
             )}
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-            <select
-              value={selectedBrand}
-              onChange={(e) => { setSelectedBrand(e.target.value); handleFilterChange(); }}
-              className="shrink-0 h-8 px-2.5 rounded-lg border border-border bg-surface text-xs text-foreground outline-none focus:ring-2 focus:ring-brand/40"
-            >
-              <option value="All">All Brands</option>
+            
+      <Select value={String(selectedBrand)} onValueChange={(val) => { setSelectedBrand(val); handleFilterChange(); }}>
+        <SelectTrigger className="shrink-0 h-8 px-2.5 rounded-lg border border-border bg-surface text-xs text-foreground outline-none focus:ring-2 focus:ring-brand/40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          
+              <SelectItem value={"All".toString()}>All Brands</SelectItem>
               {CATALOG_BRANDS.map((b) => (
-                <option key={b} value={b}>{b}</option>
+                <SelectItem value={{b}.toString()}>{b}</SelectItem>
               ))}
-            </select>
-            <select
-              value={selectedCategory}
-              onChange={(e) => { setSelectedCategory(e.target.value); handleFilterChange(); }}
-              className="shrink-0 h-8 px-2.5 rounded-lg border border-border bg-surface text-xs text-foreground outline-none focus:ring-2 focus:ring-brand/40"
-            >
-              <option value="All">All Categories</option>
+            
+        </SelectContent>
+      </Select>
+    
+            
+      <Select value={String(selectedCategory)} onValueChange={(val) => { setSelectedCategory(val); handleFilterChange(); }}>
+        <SelectTrigger className="shrink-0 h-8 px-2.5 rounded-lg border border-border bg-surface text-xs text-foreground outline-none focus:ring-2 focus:ring-brand/40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          
+              <SelectItem value={"All".toString()}>All Categories</SelectItem>
               {CATALOG_CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <SelectItem value={{c}.toString()}>{c}</SelectItem>
               ))}
-            </select>
+            
+        </SelectContent>
+      </Select>
+    
           </div>
         </div>
 

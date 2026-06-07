@@ -167,16 +167,21 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground">
           <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
-          <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="flex-1 bg-transparent outline-none text-sm"
-          >
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="quarter">This Quarter</option>
-            <option value="year">This Year</option>
-          </select>
+          
+      <Select value={String(dateRange)} onValueChange={(val) => setDateRange(val)}>
+        <SelectTrigger className="flex-1 bg-transparent outline-none text-sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          
+            <SelectItem value={"week".toString()}>This Week</SelectItem>
+            <SelectItem value={"month".toString()}>This Month</SelectItem>
+            <SelectItem value={"quarter".toString()}>This Quarter</SelectItem>
+            <SelectItem value={"year".toString()}>This Year</SelectItem>
+          
+        </SelectContent>
+      </Select>
+    
         </div>
         <button
           onClick={() => refetch()}

@@ -119,15 +119,20 @@ export default function Inventory() {
           </button>
         ))}
         <div className="ml-auto">
-          <select
-            value={stockFilter}
-            onChange={(e) => setStockFilter(e.target.value)}
-            className="h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground outline-none"
-          >
-            <option>All</option>
-            <option>Low Stock</option>
-            <option>Out of Stock</option>
-          </select>
+          
+      <Select value={String(stockFilter)} onValueChange={(val) => setStockFilter(val)}>
+        <SelectTrigger className="h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground outline-none">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          
+            <SelectItem value={"All".toString()}>All</SelectItem>
+            <SelectItem value={"Low Stock".toString()}>Low Stock</SelectItem>
+            <SelectItem value={"Out of Stock".toString()}>Out of Stock</SelectItem>
+          
+        </SelectContent>
+      </Select>
+    
         </div>
       </div>
 

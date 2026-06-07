@@ -169,10 +169,19 @@ export default function Customers() {
           <Search className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
           <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground text-foreground text-sm" placeholder="Search customers…" />
         </div>
-        <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground outline-none">
-          <option value="All">All Types</option>
-          {customerTypes.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
+        
+      <Select value={String(selectedType)} onValueChange={(val) => setSelectedType(val)}>
+        <SelectTrigger className="h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground outline-none">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          
+          <SelectItem value={"All".toString()}>All Types</SelectItem>
+          {customerTypes.map((t) => <SelectItem value={{t}.toString()}>{t}</SelectItem>)}
+        
+        </SelectContent>
+      </Select>
+    
       </div>
 
       {isLoading ? (

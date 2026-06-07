@@ -83,8 +83,7 @@ export default function Settings() {
   const [clearPasswordError, setClearPasswordError] = useState('');
 
   // Company form
-  const {
-    register: registerCompany,
+  const { register: registerCompany, control: controlCompany,
     handleSubmit: handleCompanySubmit,
     reset: resetCompany,
   } = useForm<CompanyData>();
@@ -669,9 +668,7 @@ export default function Settings() {
                   { value: "false", label: "Inactive" },
                 ]}
                 defaultValue={String(selectedEmployee.isActive)}
-                {...registerEditEmployee("isActive", {
-                  required: "Status is required",
-                })}
+                name="isActive" control={controlEditEmployee} required 
                 error={editEmployeeErrors.isActive}
               />
 

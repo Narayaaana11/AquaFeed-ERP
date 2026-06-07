@@ -154,15 +154,33 @@ export default function Expenses() {
           <Search className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
           <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground text-foreground text-sm" placeholder="Search expenses…" />
         </div>
-        <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground outline-none">
-          <option value="All">All Categories</option>
-          {EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground outline-none">
-          <option value="All">All Status</option>
-          <option value="Approved">Approved</option>
-          <option value="Pending Approval">Pending</option>
-        </select>
+        
+      <Select value={String(selectedCategory)} onValueChange={(val) => setSelectedCategory(val)}>
+        <SelectTrigger className="h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground outline-none">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          
+          <SelectItem value={"All".toString()}>All Categories</SelectItem>
+          {EXPENSE_CATEGORIES.map((c) => <SelectItem value={{c}.toString()}>{c}</SelectItem>)}
+        
+        </SelectContent>
+      </Select>
+    
+        
+      <Select value={String(selectedStatus)} onValueChange={(val) => setSelectedStatus(val)}>
+        <SelectTrigger className="h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground outline-none">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          
+          <SelectItem value={"All".toString()}>All Status</SelectItem>
+          <SelectItem value={"Approved".toString()}>Approved</SelectItem>
+          <SelectItem value={"Pending Approval".toString()}>Pending</SelectItem>
+        
+        </SelectContent>
+      </Select>
+    
       </div>
 
       {isLoading ? (

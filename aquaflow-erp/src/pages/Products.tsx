@@ -289,23 +289,33 @@ export default function Products() {
           )}
         </div>
         <div className="flex gap-2">
-          <select
-            value={selectedBrand}
-            onChange={(e) => handleBrandChange(e.target.value)}
-            className="flex-1 sm:flex-none h-10 px-3 rounded-xl border border-border bg-surface text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/50"
-          >
-            <option>All Brands</option>
-            {brands.map((b) => <option key={b} value={b}>{b}</option>)}
-          </select>
-          <select
-            value={selectedStockFilter}
-            onChange={(e) => handleStockChange(e.target.value)}
-            className="flex-1 sm:flex-none h-10 px-3 rounded-xl border border-border bg-surface text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/50"
-          >
-            <option>All Stock</option>
-            <option>Low Stock</option>
-            <option>In Stock</option>
-          </select>
+          
+      <Select value={String(selectedBrand)} onValueChange={(val) => handleBrandChange(val)}>
+        <SelectTrigger className="flex-1 sm:flex-none h-10 px-3 rounded-xl border border-border bg-surface text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/50">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          
+            <SelectItem value={"All Brands".toString()}>All Brands</SelectItem>
+            {brands.map((b) => <SelectItem value={{b}.toString()}>{b}</SelectItem>)}
+          
+        </SelectContent>
+      </Select>
+    
+          
+      <Select value={String(selectedStockFilter)} onValueChange={(val) => handleStockChange(val)}>
+        <SelectTrigger className="flex-1 sm:flex-none h-10 px-3 rounded-xl border border-border bg-surface text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/50">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          
+            <SelectItem value={"All Stock".toString()}>All Stock</SelectItem>
+            <SelectItem value={"Low Stock".toString()}>Low Stock</SelectItem>
+            <SelectItem value={"In Stock".toString()}>In Stock</SelectItem>
+          
+        </SelectContent>
+      </Select>
+    
         </div>
       </div>
 

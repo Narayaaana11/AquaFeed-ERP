@@ -306,7 +306,7 @@ export default function Sales() {
                     { value: "Bank Transfer", label: "Bank Transfer" },
                     { value: "Split", label: "Split (Partial Payment)" },
                   ]}
-                  {...register("paymentType")}
+                  name="paymentType" control={control} 
                 />
               </div>
 
@@ -532,16 +532,21 @@ export default function Sales() {
                   </div>
                   <div className="flex-1">
                     <label className="block text-xs text-muted-foreground mb-1">Method</label>
-                    <select
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full h-9 px-3 rounded-lg border border-border bg-surface text-sm outline-none"
-                    >
-                      <option value="Cash">Cash</option>
-                      <option value="UPI">UPI</option>
-                      <option value="Cheque">Cheque</option>
-                      <option value="Bank Transfer">Bank Transfer</option>
-                    </select>
+                    
+      <Select value={String(paymentMethod)} onValueChange={(val) => setPaymentMethod(val)}>
+        <SelectTrigger className="w-full h-9 px-3 rounded-lg border border-border bg-surface text-sm outline-none">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          
+                      <SelectItem value={"Cash".toString()}>Cash</SelectItem>
+                      <SelectItem value={"UPI".toString()}>UPI</SelectItem>
+                      <SelectItem value={"Cheque".toString()}>Cheque</SelectItem>
+                      <SelectItem value={"Bank Transfer".toString()}>Bank Transfer</SelectItem>
+                    
+        </SelectContent>
+      </Select>
+    
                   </div>
                 </div>
                 <div className="flex gap-2 mt-3">
