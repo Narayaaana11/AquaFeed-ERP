@@ -24,14 +24,14 @@ export function FormSelect({ label, error, helperText, options, name, control, c
         <div className="w-full">
           {label && (
             <label className="block text-sm font-display font-medium text-foreground mb-1.5">
-              {label}
+              {label.replace(/\s?\*$/, "")}
               {required && <span className="text-destructive"> *</span>}
             </label>
           )}
           <Select 
             disabled={disabled}
             onValueChange={field.onChange}
-            value={field.value}
+            value={field.value ? String(field.value) : undefined}
           >
             <SelectTrigger className={`h-10 ${error ? "border-destructive focus:ring-destructive/50" : "border-border focus:ring-brand/50"} ${className || ""}`}>
               <SelectValue placeholder={placeholder} />
