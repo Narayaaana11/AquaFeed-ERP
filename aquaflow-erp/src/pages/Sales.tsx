@@ -226,8 +226,20 @@ export default function Sales() {
             },
             {
               key: "total",
-              header: "Amount",
+              header: "Total",
               cell: (r) => <span className="font-display font-semibold text-foreground">₹{(r.total || 0).toLocaleString("en-IN")}</span>,
+            },
+            {
+              key: "balance",
+              header: "Balance",
+              cell: (r) => {
+                const balance = r.total - (r.paidAmount || 0);
+                return (
+                  <span className={`font-display font-semibold ${balance > 0 ? "text-brand" : "text-success"}`}>
+                    ₹{balance.toLocaleString("en-IN")}
+                  </span>
+                );
+              },
             },
             {
               key: "paymentType",
