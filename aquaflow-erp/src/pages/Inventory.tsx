@@ -10,20 +10,30 @@ import { validationRules } from "@/lib/validations";
 import { useInventory, useAdjustInventory, useStockAdjustments } from "@/hooks/useInventory";
 import { useProducts } from "@/hooks/useProducts";
 import { useInventory as useInventoryWebSocket } from "@/hooks/useModuleWebSocket";
+import { useWarehouses } from "@/hooks/useWarehouses";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface StockAdjustmentData {
   productId: string;
   type: string;
   quantity: number;
   reason?: string;
+  fromWarehouseId?: string;
+  toWarehouseId?: string;
 }
 
 export default function Inventory() {
   const [stockFilter, setStockFilter] = useState("All");
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
+  const [isProductComboboxOpen, setIsProductComboboxOpen] = useState(false);
   const [tab, setTab] = useState<"stock" | "movements">("stock");
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  const { data: warehouses = [] } = useWarehouses();
 
   const { data: inventory = [], isLoading, refetch: refetchInventory } = useInventory({
     stockStatus: stockFilter === "Low Stock" ? "low_stock" : stockFilter === "Out of Stock" ? "out_of_stock" : undefined,
@@ -48,9 +58,10 @@ export default function Inventory() {
   const { data: products = [] } = useProducts();
   const adjustInventory = useAdjustInventory();
 
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<StockAdjustmentData>({ mode: "onBlur", defaultValues: { type: "add" } });
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<StockAdjustmentData>({ mode: "onBlur", defaultValues: { type: "add" } });
 
   const selectedProductId = watch("productId");
+  const adjustmentType = watch("type");
   const selectedProductData = products.find((p) => p._id === selectedProductId);
 
   const lowStockCount = inventory.filter((p: any) => p.stockStatus === "low_stock" || p.stockStatus === "critical").length;
@@ -253,12 +264,66 @@ export default function Inventory() {
             </div>
 
             <form onSubmit={handleSubmit(onAdjustSubmit)} className="space-y-4">
-              <FormSelect
-                label="Product *"
-                options={products.map((p) => ({ value: p._id, label: `${p.name} (Stock: ${p.stock})` }))}
-                {...register("productId", { required: "Product is required" })}
-                error={errors.productId}
-              />
+              <div className="space-y-2">
+                <label className="text-sm font-display font-semibold text-foreground">Product *</label>
+                <Popover open={isProductComboboxOpen} onOpenChange={setIsProductComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      role="combobox"
+                      aria-expanded={isProductComboboxOpen}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-lg border border-border bg-surface px-3 h-11 text-sm font-medium",
+                        !selectedProductId && "text-muted-foreground"
+                      )}
+                    >
+                      <span className="truncate">
+                        {selectedProductId
+                          ? (() => {
+                              const p = products.find((p) => p._id === selectedProductId);
+                              return p ? `${p.name} (Stock: ${p.stock})` : "Select product...";
+                            })()
+                          : "Select product..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[380px] p-0 z-[100]" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search product by name or brand..." />
+                      <CommandList>
+                        <CommandEmpty>No product found.</CommandEmpty>
+                        <CommandGroup>
+                          {products.map((p) => (
+                            <CommandItem
+                              key={p._id}
+                              value={`${p.name} ${p.brand} ${p.category} ${p._id}`}
+                              onSelect={() => {
+                                setValue("productId", p._id, { shouldValidate: true });
+                                setIsProductComboboxOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedProductId === p._id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{p.name}</span>
+                                <span className="text-xs text-muted-foreground">{p.brand} · Stock: {p.stock}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {errors.productId && (
+                  <p className="text-xs font-medium text-destructive mt-1.5">{errors.productId.message}</p>
+                )}
+              </div>
 
               {selectedProductData && (
                 <div className="p-3 rounded-lg bg-secondary border border-border flex items-center justify-between">
@@ -269,19 +334,37 @@ export default function Inventory() {
 
               <div>
                 <label className="text-sm font-display font-semibold text-foreground block mb-2">Adjustment Type</label>
-                <div className="flex gap-3">
+                <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                   {[
-                    { value: "add", label: "Add Stock" },
-                    { value: "remove", label: "Remove Stock" },
-                    { value: "adjustment", label: "Set to Exact" },
+                    { value: "add", label: "Add" },
+                    { value: "remove", label: "Remove" },
+                    { value: "transfer", label: "Transfer" },
+                    { value: "adjustment", label: "Set Exact" },
                   ].map((opt) => (
-                    <label key={opt.value} className="flex items-center gap-2 flex-1 p-2.5 rounded-lg border border-border cursor-pointer hover:bg-secondary transition-colors">
+                    <label key={opt.value} className="flex items-center gap-2 flex-1 min-w-[100px] p-2.5 rounded-lg border border-border cursor-pointer hover:bg-secondary transition-colors">
                       <input type="radio" value={opt.value} {...register("type")} className="w-4 h-4 accent-brand" />
                       <span className="text-xs font-medium text-foreground">{opt.label}</span>
                     </label>
                   ))}
                 </div>
               </div>
+
+              {adjustmentType === "transfer" && (
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-brand/5 border border-brand/20">
+                  <FormSelect
+                    label="From Warehouse *"
+                    options={warehouses.map((w) => ({ value: w._id, label: w.name }))}
+                    {...register("fromWarehouseId", { required: adjustmentType === "transfer" ? "Required" : false })}
+                    error={errors.fromWarehouseId}
+                  />
+                  <FormSelect
+                    label="To Warehouse *"
+                    options={warehouses.map((w) => ({ value: w._id, label: w.name }))}
+                    {...register("toWarehouseId", { required: adjustmentType === "transfer" ? "Required" : false })}
+                    error={errors.toWarehouseId}
+                  />
+                </div>
+              )}
 
               <FormNumber
                 label="Quantity"

@@ -62,11 +62,47 @@ const getAdjustments = async (req, res, next) => {
 // POST /api/inventory/adjust
 const adjustInventory = async (req, res, next) => {
   try {
-    const { productId, type, quantity, reason } = req.body;
+    const { productId, type, quantity, reason, fromWarehouseId, toWarehouseId } = req.body;
     const product = await Product.findOne({ _id: productId, company: req.companyId });
     if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
 
     const previousStock = product.stock;
+    
+    if (type === 'transfer') {
+      // Global stock remains unchanged
+      const newStock = previousStock;
+      
+      const outAdjustment = await StockAdjustment.create({
+        product: product._id,
+        warehouse: fromWarehouseId,
+        type: 'transfer_out',
+        quantity: Math.abs(quantity),
+        previousStock,
+        newStock,
+        reason: reason || 'Warehouse Transfer',
+        createdBy: req.user._id,
+        company: req.companyId,
+      });
+      
+      await StockAdjustment.create({
+        product: product._id,
+        warehouse: toWarehouseId,
+        type: 'transfer_in',
+        quantity: Math.abs(quantity),
+        previousStock,
+        newStock,
+        reason: reason || 'Warehouse Transfer',
+        createdBy: req.user._id,
+        company: req.companyId,
+      });
+
+      await outAdjustment.populate('product', 'name brand');
+      await outAdjustment.populate('createdBy', 'name');
+
+      return res.json({ success: true, data: { product, adjustment: outAdjustment } });
+    }
+
+    // Normal adjustments
     let newStock;
     if (type === 'add') newStock = previousStock + Math.abs(quantity);
     else if (type === 'remove') newStock = Math.max(0, previousStock - Math.abs(quantity));

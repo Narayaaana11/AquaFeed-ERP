@@ -11,6 +11,12 @@ export interface InvoiceItem {
   lineTotal: number;
 }
 
+export interface InvoicePayment {
+  amount: number;
+  paymentType: string;
+  date: string;
+}
+
 export interface Invoice {
   _id: string;
   invoiceNumber: string;
@@ -22,6 +28,7 @@ export interface Invoice {
   gstAmount: number;
   total: number;
   paidAmount: number;
+  payments?: InvoicePayment[];
   paymentType: string;
   status: string;
   dueDate?: string;
@@ -59,6 +66,7 @@ export function useCreateInvoice() {
       items: { productId: string; quantity: number; unitPrice?: number }[];
       paymentType: string;
       notes?: string;
+      paidAmount?: number;
     }) => {
       const { data } = await api.post('/sales', body);
       return data.data as Invoice;
@@ -102,5 +110,21 @@ export function useCancelInvoice() {
       toast.success('Invoice cancelled.');
     },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to cancel invoice'),
+  });
+}
+
+export function useAddInvoicePayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, amount, paymentType }: { id: string; amount: number; paymentType: string }) => {
+      const { data } = await api.post(`/sales/${id}/payments`, { amount, paymentType });
+      return data.data as Invoice;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['sales'] });
+      qc.invalidateQueries({ queryKey: ['customers'] });
+      toast.success('Payment added successfully!');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to add payment'),
   });
 }

@@ -66,7 +66,7 @@ const getInvoice = async (req, res, next) => {
 // POST /api/sales
 const createInvoice = async (req, res, next) => {
   try {
-    const { customerId, items, paymentType, notes, gstRate } = req.body;
+    const { customerId, items, paymentType, notes, gstRate, paidAmount } = req.body;
 
     const customer = await Customer.findOne({ _id: customerId, company: req.companyId });
     if (!customer) return res.status(404).json({ success: false, message: 'Customer not found.' });
@@ -102,9 +102,21 @@ const createInvoice = async (req, res, next) => {
     const gstAmount = Math.round(subtotal * (invoiceGstRate / 100));
     const total = subtotal + gstAmount;
 
-    // Credit check for credit payment
+    // Determine the actual paid amount and credit amount
+    let initialPaidAmount = 0;
     if (paymentType === 'Credit') {
-      const newOutstanding = customer.outstandingBalance + total;
+      initialPaidAmount = 0;
+    } else if (paidAmount !== undefined) {
+      initialPaidAmount = paidAmount;
+    } else {
+      initialPaidAmount = total;
+    }
+    
+    const creditAmount = total - initialPaidAmount;
+
+    // Credit check for credit payment
+    if (creditAmount > 0) {
+      const newOutstanding = customer.outstandingBalance + creditAmount;
       if (customer.creditLimit > 0 && newOutstanding > customer.creditLimit) {
         return res.status(400).json({
           success: false,
@@ -114,8 +126,12 @@ const createInvoice = async (req, res, next) => {
     }
 
     const invoiceNumber = await generateInvoiceNumber(company);
-    const status = paymentType === 'Credit' ? 'Credit' : 'Paid';
-    const dueDate = paymentType === 'Credit' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null;
+    const status = initialPaidAmount >= total ? 'Paid' : 'Credit';
+    const dueDate = creditAmount > 0 ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null;
+    const payments = initialPaidAmount > 0 ? [{
+      amount: initialPaidAmount,
+      paymentType: paymentType === 'Split' ? 'Cash' : (paymentType === 'Credit' ? 'Cash' : paymentType)
+    }] : [];
 
     const invoice = await Invoice.create({
       invoiceNumber,
@@ -126,7 +142,8 @@ const createInvoice = async (req, res, next) => {
       gstRate: invoiceGstRate,
       gstAmount,
       total,
-      paidAmount: paymentType !== 'Credit' ? total : 0,
+      paidAmount: initialPaidAmount,
+      payments,
       paymentType,
       status,
       dueDate,
@@ -155,8 +172,8 @@ const createInvoice = async (req, res, next) => {
     }
 
     // Update customer outstanding if credit
-    if (paymentType === 'Credit') {
-      await Customer.findByIdAndUpdate(customer._id, { $inc: { outstandingBalance: total } });
+    if (creditAmount > 0) {
+      await Customer.findByIdAndUpdate(customer._id, { $inc: { outstandingBalance: creditAmount } });
     }
 
     const populated = await Invoice.findById(invoice._id).populate('customer', 'name phone');
@@ -244,4 +261,44 @@ const deleteInvoice = async (req, res, next) => {
   }
 };
 
-module.exports = { getInvoices, getInvoice, createInvoice, updateInvoiceStatus, deleteInvoice };
+// POST /api/sales/:id/payments
+const addPayment = async (req, res, next) => {
+  try {
+    const { amount, paymentType } = req.body;
+    const invoice = await Invoice.findOne({ _id: req.params.id, company: req.companyId });
+    if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found.' });
+
+    if (amount <= 0) return res.status(400).json({ success: false, message: 'Payment amount must be greater than 0.' });
+    
+    const remainingBalance = invoice.total - invoice.paidAmount;
+    if (amount > remainingBalance) {
+      return res.status(400).json({ success: false, message: `Payment exceeds remaining balance of ₹${remainingBalance}.` });
+    }
+
+    invoice.paidAmount += amount;
+    invoice.payments.push({ amount, paymentType });
+    
+    if (invoice.paidAmount >= invoice.total) {
+      invoice.status = 'Paid';
+    }
+    
+    await invoice.save();
+
+    // Reduce customer outstanding
+    await Customer.findByIdAndUpdate(invoice.customer, {
+      $inc: { outstandingBalance: -amount },
+    });
+
+    // Emit WebSocket events
+    const io = req.app.locals.io;
+    if (io) {
+      emitInvoicePaid(io, req.companyId, invoice);
+    }
+
+    res.json({ success: true, data: invoice });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getInvoices, getInvoice, createInvoice, updateInvoiceStatus, deleteInvoice, addPayment };

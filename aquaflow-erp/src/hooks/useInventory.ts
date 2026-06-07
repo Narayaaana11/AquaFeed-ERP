@@ -27,7 +27,7 @@ export function useStockAdjustments(params?: { productId?: string; page?: number
 export function useAdjustInventory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { productId: string; type: string; quantity: number; reason?: string }) => {
+    mutationFn: async (body: { productId: string; type: string; quantity: number; reason?: string; fromWarehouseId?: string; toWarehouseId?: string }) => {
       const { data } = await api.post('/inventory/adjust', body);
       return data.data;
     },

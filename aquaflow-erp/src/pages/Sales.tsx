@@ -7,7 +7,7 @@ import { Plus, Eye, Download, FileText, Search, X, Trash2, CheckCircle } from "l
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useForm, useFieldArray } from "react-hook-form";
-import { useSales, useCreateInvoice, useUpdateInvoiceStatus, type Invoice } from "@/hooks/useSales";
+import { useSales, useCreateInvoice, useUpdateInvoiceStatus, useAddInvoicePayment, type Invoice } from "@/hooks/useSales";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useProducts } from "@/hooks/useProducts";
 import { useSales as useSalesWebSocket } from "@/hooks/useModuleWebSocket";
@@ -17,6 +17,7 @@ interface CreateInvoiceFormData {
   customerId: string;
   paymentType: string;
   notes: string;
+  paidAmount?: number;
   items: { productId: string; quantity: number; unitPrice: number }[];
 }
 
@@ -26,6 +27,9 @@ export default function Sales() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [showAddPayment, setShowAddPayment] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -56,6 +60,7 @@ export default function Sales() {
 
   const createInvoice = useCreateInvoice();
   const updateStatus = useUpdateInvoiceStatus();
+  const addPayment = useAddInvoicePayment();
 
   const { register, control, handleSubmit, reset, watch, setValue, formState: { errors } } =
     useForm<CreateInvoiceFormData>({
@@ -63,6 +68,7 @@ export default function Sales() {
         customerId: "",
         paymentType: "Cash",
         notes: "",
+        paidAmount: undefined,
         items: [{ productId: "", quantity: 1, unitPrice: 0 }],
       },
     });
@@ -93,6 +99,7 @@ export default function Sales() {
         customerId: data.customerId,
         paymentType: data.paymentType,
         notes: data.notes,
+        paidAmount: data.paymentType === 'Split' ? data.paidAmount : undefined,
         items: validItems.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -108,11 +115,35 @@ export default function Sales() {
 
   const handleView = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
+    setShowAddPayment(false);
     setIsViewOpen(true);
   };
 
   const handleMarkPaid = async (invoice: Invoice) => {
-    await updateStatus.mutateAsync({ id: invoice._id, status: "Paid" });
+    const balance = invoice.total - (invoice.paidAmount || 0);
+    await addPayment.mutateAsync({ id: invoice._id, amount: balance, paymentType: "Cash" });
+  };
+
+  const handleAddPayment = async () => {
+    if (!selectedInvoice) return;
+    if (paymentAmount <= 0) {
+      toast.error("Amount must be greater than 0");
+      return;
+    }
+    const balance = selectedInvoice.total - (selectedInvoice.paidAmount || 0);
+    if (paymentAmount > balance) {
+      toast.error(`Amount cannot exceed balance of ₹${balance}`);
+      return;
+    }
+    
+    await addPayment.mutateAsync({
+      id: selectedInvoice._id,
+      amount: paymentAmount,
+      paymentType: paymentMethod,
+    });
+    
+    setShowAddPayment(false);
+    setIsViewOpen(false);
   };
 
   return (
@@ -261,10 +292,26 @@ export default function Sales() {
                     { value: "Cheque", label: "Cheque" },
                     { value: "Credit", label: "Credit" },
                     { value: "Bank Transfer", label: "Bank Transfer" },
+                    { value: "Split", label: "Split (Partial Payment)" },
                   ]}
                   {...register("paymentType")}
                 />
               </div>
+
+              {watch("paymentType") === "Split" && (
+                <div>
+                  <label className="block text-sm font-display font-medium text-foreground mb-1.5">Amount Paid Upfront</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={total}
+                    {...register("paidAmount", { valueAsNumber: true })}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/50"
+                    placeholder={`Total is ₹${total.toLocaleString("en-IN")}`}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Remaining balance will be added to customer's credit.</p>
+                </div>
+              )}
 
               {/* Line Items */}
               <div>
@@ -419,13 +466,34 @@ export default function Sales() {
               </table>
             </div>
 
+            {selectedInvoice.payments && selectedInvoice.payments.length > 0 && (
+              <div className="mb-4">
+                <p className="text-sm font-display font-semibold text-foreground mb-2">Payment History</p>
+                <div className="bg-secondary rounded-lg p-3 space-y-2">
+                  {selectedInvoice.payments.map((p, i) => (
+                    <div key={i} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">{new Date(p.date).toLocaleDateString("en-IN")} ({p.paymentType})</span>
+                      <span className="font-medium text-foreground">₹{p.amount.toLocaleString("en-IN")}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end mb-6">
               <div className="text-right w-64">
                 <div className="flex justify-between text-sm text-muted-foreground"><span>Subtotal:</span><span>₹{(selectedInvoice.subtotal || 0).toLocaleString("en-IN")}</span></div>
                 <div className="flex justify-between text-sm text-muted-foreground mt-1"><span>GST ({selectedInvoice.gstRate}%):</span><span>₹{(selectedInvoice.gstAmount || 0).toLocaleString("en-IN")}</span></div>
                 <div className="flex justify-between border-t border-border mt-2 pt-2">
-                  <span className="font-display font-bold text-foreground">Total:</span>
-                  <span className="font-display font-bold text-lg text-brand">₹{(selectedInvoice.total || 0).toLocaleString("en-IN")}</span>
+                  <span className="font-display font-semibold text-foreground">Total:</span>
+                  <span className="font-display font-semibold text-foreground">₹{(selectedInvoice.total || 0).toLocaleString("en-IN")}</span>
+                </div>
+                <div className="flex justify-between text-sm text-success mt-1">
+                  <span>Paid:</span><span>-₹{(selectedInvoice.paidAmount || 0).toLocaleString("en-IN")}</span>
+                </div>
+                <div className="flex justify-between border-t border-border mt-2 pt-2">
+                  <span className="font-display font-bold text-foreground">Balance Due:</span>
+                  <span className="font-display font-bold text-lg text-brand">₹{(selectedInvoice.total - (selectedInvoice.paidAmount || 0)).toLocaleString("en-IN")}</span>
                 </div>
               </div>
             </div>
@@ -437,14 +505,51 @@ export default function Sales() {
               </div>
             )}
 
+            {showAddPayment && (selectedInvoice.status === "Pending" || selectedInvoice.status === "Credit") && (
+              <div className="mb-4 p-4 rounded-lg border border-border bg-secondary/50">
+                <h3 className="text-sm font-display font-semibold text-foreground mb-3">Record Payment</h3>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="block text-xs text-muted-foreground mb-1">Amount</label>
+                    <input
+                      type="number"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                      className="w-full h-9 px-3 rounded-lg border border-border bg-surface text-sm outline-none"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs text-muted-foreground mb-1">Method</label>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-full h-9 px-3 rounded-lg border border-border bg-surface text-sm outline-none"
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="UPI">UPI</option>
+                      <option value="Cheque">Cheque</option>
+                      <option value="Bank Transfer">Bank Transfer</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={handleAddPayment} disabled={addPayment.isPending} className="px-3 h-8 rounded-md bg-brand text-white text-xs font-medium">Save Payment</button>
+                  <button onClick={() => setShowAddPayment(false)} className="px-3 h-8 rounded-md border border-border bg-surface text-xs font-medium">Cancel</button>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4 border-t border-border">
-              <button onClick={() => setIsViewOpen(false)} className="flex-1 h-10 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Close</button>
-              {(selectedInvoice.status === "Pending" || selectedInvoice.status === "Credit") && (
+              <button onClick={() => { setIsViewOpen(false); setShowAddPayment(false); }} className="flex-1 h-10 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Close</button>
+              {(selectedInvoice.status === "Pending" || selectedInvoice.status === "Credit") && !showAddPayment && (
                 <button
-                  onClick={() => { handleMarkPaid(selectedInvoice); setIsViewOpen(false); }}
+                  onClick={() => {
+                    setPaymentAmount(selectedInvoice.total - (selectedInvoice.paidAmount || 0));
+                    setShowAddPayment(true);
+                  }}
                   className="flex-1 h-10 rounded-lg bg-success text-white text-sm font-display font-semibold hover:bg-success/90 transition-colors flex items-center justify-center gap-2"
                 >
-                  <CheckCircle className="w-4 h-4" /> Mark as Paid
+                  <Plus className="w-4 h-4" /> Add Payment
                 </button>
               )}
             </div>
