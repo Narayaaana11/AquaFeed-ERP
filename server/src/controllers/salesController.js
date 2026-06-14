@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Invoice = require('../models/Invoice');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
@@ -6,11 +7,11 @@ const StockAdjustment = require('../models/StockAdjustment');
 const { emitInvoiceCreated, emitInvoiceUpdated, emitInvoiceDeleted, emitInvoicePaid, emitDashboardUpdate, emitLowStockAlert } = require('../utils/websocket');
 
 // Generate next invoice number
-const generateInvoiceNumber = async (company) => {
+const generateInvoiceNumber = async (company, session) => {
   const prefix = company.invoicePrefix || 'INV';
   const counter = company.invoiceCounter || 1;
   const number = String(counter).padStart(4, '0');
-  await Company.findByIdAndUpdate(company._id, { $inc: { invoiceCounter: 1 } });
+  await Company.findByIdAndUpdate(company._id, { $inc: { invoiceCounter: 1 } }, { session });
   return `${prefix}-${number}`;
 };
 
@@ -65,13 +66,19 @@ const getInvoice = async (req, res, next) => {
 
 // POST /api/sales
 const createInvoice = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const { customerId, items, paymentType, notes, gstRate, paidAmount } = req.body;
 
-    const customer = await Customer.findOne({ _id: customerId, company: req.companyId });
-    if (!customer) return res.status(404).json({ success: false, message: 'Customer not found.' });
+    const customer = await Customer.findOne({ _id: customerId, company: req.companyId }).session(session);
+    if (!customer) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ success: false, message: 'Customer not found.' });
+    }
 
-    const company = await Company.findById(req.companyId);
+    const company = await Company.findById(req.companyId).session(session);
     const invoiceGstRate = gstRate ?? company.gstRate ?? 5;
 
     // Build line items with stock check
@@ -79,9 +86,15 @@ const createInvoice = async (req, res, next) => {
     const lineItems = [];
 
     for (const item of items) {
-      const product = await Product.findOne({ _id: item.productId, company: req.companyId });
-      if (!product) return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
+      const product = await Product.findOne({ _id: item.productId, company: req.companyId }).session(session);
+      if (!product) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
+      }
       if (product.stock < item.quantity) {
+        await session.abortTransaction();
+        session.endSession();
         return res.status(400).json({
           success: false,
           message: `Insufficient stock for "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`,
@@ -118,6 +131,8 @@ const createInvoice = async (req, res, next) => {
     if (creditAmount > 0) {
       const newOutstanding = customer.outstandingBalance + creditAmount;
       if (customer.creditLimit > 0 && newOutstanding > customer.creditLimit) {
+        await session.abortTransaction();
+        session.endSession();
         return res.status(400).json({
           success: false,
           message: `Credit limit exceeded for ${customer.name}. Limit: ₹${customer.creditLimit}, Outstanding would be: ₹${newOutstanding}`,
@@ -125,7 +140,7 @@ const createInvoice = async (req, res, next) => {
       }
     }
 
-    const invoiceNumber = await generateInvoiceNumber(company);
+    const invoiceNumber = await generateInvoiceNumber(company, session);
     const status = initialPaidAmount >= total ? 'Paid' : 'Credit';
     const dueDate = creditAmount > 0 ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null;
     const payments = initialPaidAmount > 0 ? [{
@@ -133,7 +148,7 @@ const createInvoice = async (req, res, next) => {
       paymentType: paymentType === 'Split' ? 'Cash' : (paymentType === 'Credit' ? 'Cash' : paymentType)
     }] : [];
 
-    const invoice = await Invoice.create({
+    const [invoice] = await Invoice.create([{
       invoiceNumber,
       customer: customer._id,
       customerName: customer.name,
@@ -150,15 +165,15 @@ const createInvoice = async (req, res, next) => {
       notes,
       createdBy: req.user._id,
       company: req.companyId,
-    });
+    }], { session });
 
     // Deduct stock for each product + log adjustment
     for (const item of items) {
-      const product = await Product.findById(item.productId);
+      const product = await Product.findById(item.productId).session(session);
       const prevStock = product.stock;
       product.stock -= item.quantity;
-      await product.save();
-      await StockAdjustment.create({
+      await product.save({ session });
+      await StockAdjustment.create([{
         product: product._id,
         type: 'sale',
         quantity: item.quantity,
@@ -168,13 +183,16 @@ const createInvoice = async (req, res, next) => {
         reference: invoiceNumber,
         createdBy: req.user._id,
         company: req.companyId,
-      });
+      }], { session });
     }
 
     // Update customer outstanding if credit
     if (creditAmount > 0) {
-      await Customer.findByIdAndUpdate(customer._id, { $inc: { outstandingBalance: creditAmount } });
+      await Customer.findByIdAndUpdate(customer._id, { $inc: { outstandingBalance: creditAmount } }, { session });
     }
+
+    await session.commitTransaction();
+    session.endSession();
 
     const populated = await Invoice.findById(invoice._id).populate('customer', 'name phone');
 
@@ -199,6 +217,8 @@ const createInvoice = async (req, res, next) => {
 
     res.status(201).json({ success: true, data: populated });
   } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
     next(err);
   }
 };

@@ -46,8 +46,15 @@ export default function Dashboard() {
       // Listen for real-time dashboard updates
       const handleDashboardUpdate = (data: any) => {
         console.log('📊 Real-time dashboard update:', data);
-        setRealTimeData(data);
-        setLastUpdate(new Date());
+        if (data && data.kpis) {
+          setRealTimeData(data);
+          setLastUpdate(new Date());
+        } else {
+          // Refetch KPI stats on update notifications to get fresh db values
+          console.log('🔄 Refetching dashboard due to update event');
+          refetch();
+          setLastUpdate(new Date());
+        }
       };
 
       // Listen for low stock alerts
@@ -275,7 +282,7 @@ export default function Dashboard() {
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ border: "1px solid hsl(214 32% 91%)", borderRadius: 8, fontSize: 12 }} />
+              <Tooltip formatter={(value: number) => [`₹${value.toLocaleString("en-IN")}`, "Value"]} contentStyle={{ border: "1px solid hsl(214 32% 91%)", borderRadius: 8, fontSize: 12 }} />
             </PieChart>
           </ResponsiveContainer>
           <ul className="mt-3 space-y-1">
@@ -285,7 +292,7 @@ export default function Dashboard() {
                   <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
                   <span className="text-foreground font-medium">{item.name}</span>
                 </div>
-                <span className="text-muted-foreground">{item.value}%</span>
+                <span className="text-muted-foreground">{item.percentage}%</span>
               </li>
             ))}
           </ul>
@@ -303,7 +310,7 @@ export default function Dashboard() {
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(214 32% 91%)" />
               <XAxis type="number" tick={{ fontSize: 10, fontFamily: "var(--font-body)", fill: "#64748b" }} axisLine={false} tickLine={false} />
               <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fontFamily: "var(--font-body)", fill: "#64748b" }} axisLine={false} tickLine={false} width={120} />
-              <Tooltip contentStyle={{ border: "1px solid hsl(214 32% 91%)", borderRadius: 8, fontSize: 12 }} />
+              <Tooltip formatter={(value: number) => [`${value.toLocaleString("en-IN")} units`, "Quantity"]} contentStyle={{ border: "1px solid hsl(214 32% 91%)", borderRadius: 8, fontSize: 12 }} />
               <Bar dataKey="qty" fill="#14b8a6" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>

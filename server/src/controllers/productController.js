@@ -123,6 +123,9 @@ const adjustStock = async (req, res, next) => {
     } else if (type === 'remove') {
       newStock = Math.max(0, previousStock - Math.abs(quantity));
     } else {
+      if (quantity < 0) {
+        return res.status(400).json({ success: false, message: 'Stock quantity cannot be negative.' });
+      }
       newStock = quantity; // absolute set
     }
 

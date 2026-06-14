@@ -1,4 +1,10 @@
 require('dotenv').config();
+
+if (!process.env.JWT_SECRET) {
+  console.error('❌ FATAL: JWT_SECRET environment variable is missing!');
+  process.exit(1);
+}
+
 const http = require('http');
 const fs = require('fs');
 const express = require('express');
@@ -65,7 +71,13 @@ const corsOptions = {
 // Initialize Socket.IO with CORS
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (isOriginAllowed(origin) || process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      callback(new Error('Origin not allowed by Socket.IO CORS'));
+    },
     credentials: true,
   },
 });
@@ -78,7 +90,7 @@ io.use((socket, next) => {
   }
 
   try {
-    const decoded = verify(token, process.env.JWT_SECRET || 'aquafeed_jwt_secret_key_change_in_production_2026');
+    const decoded = verify(token, process.env.JWT_SECRET);
     socket.userId = decoded.id;
     socket.companyId = decoded.companyId;
     next();

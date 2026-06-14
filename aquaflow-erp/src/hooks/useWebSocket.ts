@@ -26,11 +26,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const token = localStorage.getItem('token');
+
     // Initialize socket connection
     useEffect(() => {
         if (!autoConnect) return;
 
-        const token = localStorage.getItem('token');
         if (!token) {
             console.warn('⚠️  No authentication token found. WebSocket connection skipped.');
             return;
@@ -78,7 +79,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
                 socketRef.current.disconnect();
             }
         };
-    }, [url, autoConnect]);
+    }, [url, autoConnect, token]);
 
     // Subscribe to a channel
     const subscribe = useCallback((channel: string) => {
