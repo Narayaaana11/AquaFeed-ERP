@@ -350,4 +350,84 @@ const exportCSV = async (req, res, next) => {
   }
 };
 
-module.exports = { getDashboard, getSalesTrend, getTopProducts, getInventoryValue, getExpenseBreakdown, getCustomerOutstanding, exportCSV };
+// GET /api/reports/profit-loss?from=&to=
+const getProfitLoss = async (req, res, next) => {
+  try {
+    const companyId = req.companyId;
+    const { from, to } = req.query;
+
+    const startDate = from ? new Date(from) : new Date(new Date().getFullYear(), 0, 1);
+    const endDate = to ? new Date(to) : new Date();
+    endDate.setHours(23, 59, 59, 999);
+
+    const dateFilter = { $gte: startDate, $lte: endDate };
+
+    // Revenue = sum of all non-cancelled invoices in range
+    const revenueResult = await Invoice.aggregate([
+      { $match: { company: companyId, status: { $in: ['Paid', 'Credit', 'Overdue', 'Pending'] }, createdAt: dateFilter } },
+      { $group: { _id: null, total: { $sum: '$total' }, subtotal: { $sum: '$subtotal' }, gstTotal: { $sum: '$gstAmount' } } },
+    ]);
+
+    // COGS using purchasePrice from Product
+    const cogsResult = await Invoice.aggregate([
+      { $match: { company: companyId, status: { $in: ['Paid', 'Credit', 'Overdue', 'Pending'] }, createdAt: dateFilter } },
+      { $unwind: '$items' },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'items.product',
+          foreignField: '_id',
+          as: 'productData',
+        },
+      },
+      { $unwind: { path: '$productData', preserveNullAndEmpty: true } },
+      {
+        $group: {
+          _id: null,
+          cogs: {
+            $sum: {
+              $multiply: ['$items.quantity', { $ifNull: ['$productData.purchasePrice', 0] }],
+            },
+          },
+        },
+      },
+    ]);
+
+    // Operating expenses
+    const expensesResult = await Expense.aggregate([
+      { $match: { company: companyId, status: 'Approved', date: dateFilter } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]);
+
+    const revenue = revenueResult[0]?.total || 0;
+    const subtotalRevenue = revenueResult[0]?.subtotal || 0;
+    const gstCollected = revenueResult[0]?.gstTotal || 0;
+    const cogs = cogsResult[0]?.cogs || 0;
+    const grossProfit = subtotalRevenue - cogs;
+    const operatingExpenses = expensesResult[0]?.total || 0;
+    const netProfit = grossProfit - operatingExpenses;
+    const grossMargin = subtotalRevenue > 0 ? ((grossProfit / subtotalRevenue) * 100).toFixed(1) : '0';
+    const netMargin = revenue > 0 ? ((netProfit / revenue) * 100).toFixed(1) : '0';
+
+    res.json({
+      success: true,
+      data: {
+        period: { from: startDate, to: endDate },
+        revenue,
+        subtotalRevenue,
+        gstCollected,
+        cogs,
+        grossProfit,
+        grossMargin: parseFloat(grossMargin),
+        operatingExpenses,
+        netProfit,
+        netMargin: parseFloat(netMargin),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getDashboard, getSalesTrend, getTopProducts, getInventoryValue, getExpenseBreakdown, getCustomerOutstanding, exportCSV, getProfitLoss };
+

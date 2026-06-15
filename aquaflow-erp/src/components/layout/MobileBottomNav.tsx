@@ -11,6 +11,8 @@ import {
   BarChart2,
   Settings,
   X,
+  Truck,
+  ShoppingBag,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -25,6 +27,8 @@ const moreNav = [
   { to: "/inventory", label: "Inventory", icon: Layers },
   { to: "/expenses", label: "Expenses", icon: Receipt },
   { to: "/warehouses", label: "Warehouses", icon: Warehouse },
+  { to: "/suppliers", label: "Suppliers", icon: Truck },
+  { to: "/purchase-orders", label: "Purchase Orders", icon: ShoppingBag },
   { to: "/reports", label: "Reports", icon: BarChart2 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];

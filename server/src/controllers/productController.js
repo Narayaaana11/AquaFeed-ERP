@@ -1,5 +1,7 @@
 const Product = require('../models/Product');
 const StockAdjustment = require('../models/StockAdjustment');
+const Warehouse = require('../models/Warehouse');
+const Inventory = require('../models/Inventory');
 const { emitProductCreated, emitProductUpdate, emitProductDeleted, emitLowStockAlert } = require('../utils/websocket');
 
 // GET /api/products
@@ -51,6 +53,20 @@ const getProduct = async (req, res, next) => {
 const createProduct = async (req, res, next) => {
   try {
     const product = await Product.create({ ...req.body, company: req.companyId });
+
+    // Create Inventory entries for all warehouses
+    const warehouses = await Warehouse.find({ company: req.companyId });
+    if (warehouses.length > 0) {
+      const defaultWh = warehouses.find((w) => w.isDefault) || warehouses[0];
+      for (const wh of warehouses) {
+        await Inventory.create({
+          product: product._id,
+          warehouse: wh._id,
+          quantity: wh._id.toString() === defaultWh._id.toString() ? (product.stock || 0) : 0,
+          company: req.companyId,
+        });
+      }
+    }
 
     // Emit WebSocket event
     const io = req.app.locals.io;
@@ -115,27 +131,57 @@ const adjustStock = async (req, res, next) => {
     const product = await Product.findOne({ _id: req.params.id, company: req.companyId });
     if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
 
-    const previousStock = product.stock;
-    let newStock;
+    // Find default warehouse
+    const defaultWh = await Warehouse.findOne({ company: req.companyId, isDefault: true }) || await Warehouse.findOne({ company: req.companyId });
+    if (!defaultWh) {
+      return res.status(400).json({ success: false, message: 'No warehouse found to adjust stock.' });
+    }
+
+    let inventoryItem = await Inventory.findOne({
+      product: product._id,
+      warehouse: defaultWh._id,
+      company: req.companyId,
+    });
+
+    if (!inventoryItem) {
+      inventoryItem = new Inventory({
+        product: product._id,
+        warehouse: defaultWh._id,
+        quantity: 0,
+        company: req.companyId,
+      });
+    }
+
+    const previousWarehouseQty = inventoryItem.quantity;
+    let newWarehouseQty = previousWarehouseQty;
 
     if (type === 'add') {
-      newStock = previousStock + Math.abs(quantity);
+      newWarehouseQty = previousWarehouseQty + Math.abs(quantity);
     } else if (type === 'remove') {
-      newStock = Math.max(0, previousStock - Math.abs(quantity));
+      newWarehouseQty = Math.max(0, previousWarehouseQty - Math.abs(quantity));
     } else {
       if (quantity < 0) {
         return res.status(400).json({ success: false, message: 'Stock quantity cannot be negative.' });
       }
-      newStock = quantity; // absolute set
+      newWarehouseQty = quantity;
     }
 
+    inventoryItem.quantity = newWarehouseQty;
+    await inventoryItem.save();
+
+    // Recalculate global Product stock as sum of all warehouse quantities
+    const allInventories = await Inventory.find({ product: product._id, company: req.companyId });
+    const newStock = allInventories.reduce((sum, inv) => sum + inv.quantity, 0);
+
+    const previousStock = product.stock;
     product.stock = newStock;
     await product.save();
 
     await StockAdjustment.create({
       product: product._id,
+      warehouse: defaultWh._id,
       type,
-      quantity: Math.abs(newStock - previousStock),
+      quantity: Math.abs(newWarehouseQty - previousWarehouseQty),
       previousStock,
       newStock,
       reason,

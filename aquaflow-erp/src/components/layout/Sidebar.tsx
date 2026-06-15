@@ -10,6 +10,8 @@ import {
   BarChart2,
   Settings,
   LogOut,
+  Truck,
+  ShoppingBag,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLogo } from "@/components/AppLogo";
@@ -22,6 +24,8 @@ const navItems = [
   { to: "/customers", label: "Customers", icon: Users },
   { to: "/expenses", label: "Expenses", icon: Receipt },
   { to: "/warehouses", label: "Warehouses", icon: Warehouse },
+  { to: "/suppliers", label: "Suppliers", icon: Truck },
+  { to: "/purchase-orders", label: "Purchase Orders", icon: ShoppingBag },
   { to: "/reports", label: "Reports", icon: BarChart2 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];

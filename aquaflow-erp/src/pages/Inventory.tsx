@@ -61,6 +61,15 @@ export default function Inventory() {
 
   const { register, control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<StockAdjustmentData>({ mode: "onBlur", defaultValues: { type: "add" } });
 
+  useEffect(() => {
+    if (warehouses.length > 0) {
+      const defaultWh = warehouses.find((w) => w.isDefault) || warehouses[0];
+      if (defaultWh) {
+        setValue("fromWarehouseId", defaultWh._id);
+      }
+    }
+  }, [warehouses, setValue]);
+
   const selectedProductId = watch("productId");
   const adjustmentType = watch("type");
   const selectedProductData = products.find((p) => p._id === selectedProductId);
@@ -355,7 +364,7 @@ export default function Inventory() {
                 </div>
               </div>
 
-              {adjustmentType === "transfer" && (
+              {adjustmentType === "transfer" ? (
                 <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-brand/5 border border-brand/20">
                   <FormSelect
                     label="From Warehouse *"
@@ -368,6 +377,15 @@ export default function Inventory() {
                     options={warehouses.map((w) => ({ value: w._id, label: w.name }))}
                     name="toWarehouseId" control={control} required={adjustmentType === "transfer"}
                     error={errors.toWarehouseId}
+                  />
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-brand/5 border border-brand/20">
+                  <FormSelect
+                    label="Warehouse *"
+                    options={warehouses.map((w) => ({ value: w._id, label: w.name }))}
+                    name="fromWarehouseId" control={control} required={adjustmentType !== "transfer"}
+                    error={errors.fromWarehouseId}
                   />
                 </div>
               )}

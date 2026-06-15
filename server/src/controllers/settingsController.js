@@ -124,12 +124,18 @@ const loadDemoData = async (req, res, next) => {
 
     const products = await Product.insertMany(productsData.map((p) => ({ ...p, company: companyId })));
 
-    // Create Inventory entries
+    // Create Inventory entries for both warehouses
     for (const p of products) {
       await Inventory.create({
         product: p._id,
         warehouse: warehouse1._id,
         quantity: p.stock,
+        company: companyId,
+      });
+      await Inventory.create({
+        product: p._id,
+        warehouse: warehouse2._id,
+        quantity: 0,
         company: companyId,
       });
     }

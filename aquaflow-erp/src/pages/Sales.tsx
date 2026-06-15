@@ -4,13 +4,16 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DataTable } from "@/components/ui/data-table";
 import { StatusBadge, EmptyState } from "@/components/StatusBadge";
 import { FormSelect } from "@/components/forms";
-import { Plus, Eye, Download, FileText, Search, X, Trash2, CheckCircle, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Eye, FileText, Search, X, CheckCircle, Check, ChevronsUpDown, Printer, RotateCcw, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useForm, useFieldArray } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import { useSales, useCreateInvoice, useUpdateInvoiceStatus, useAddInvoicePayment, type Invoice } from "@/hooks/useSales";
+import { useCreateCreditNote } from "@/hooks/useCreditNotes";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useProducts } from "@/hooks/useProducts";
+import { useWarehouses } from "@/hooks/useWarehouses";
 import { useSales as useSalesWebSocket } from "@/hooks/useModuleWebSocket";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -21,18 +24,23 @@ interface CreateInvoiceFormData {
   paymentType: string;
   notes: string;
   paidAmount?: number;
+  warehouseId?: string;
   items: { productId: string; quantity: number; unitPrice: number }[];
 }
 
 export default function Sales() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [returnItems, setReturnItems] = useState<{ productId: string; productName: string; max: number; quantity: number; unitPrice: number }[]>([]);
+  const [returnReason, setReturnReason] = useState("");
   const [isCustomerComboboxOpen, setIsCustomerComboboxOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -61,10 +69,12 @@ export default function Sales() {
 
   const { data: customers = [] } = useCustomers();
   const { data: products = [] } = useProducts();
+  const { data: warehouses = [] } = useWarehouses();
 
   const createInvoice = useCreateInvoice();
   const updateStatus = useUpdateInvoiceStatus();
   const addPayment = useAddInvoicePayment();
+  const createCreditNote = useCreateCreditNote();
 
   const { register, control, handleSubmit, reset, watch, setValue, formState: { errors } } =
     useForm<CreateInvoiceFormData>({
@@ -76,6 +86,15 @@ export default function Sales() {
         items: [{ productId: "", quantity: 1, unitPrice: 0 }],
       },
     });
+
+  useEffect(() => {
+    if (warehouses.length > 0) {
+      const defaultWh = warehouses.find((w) => w.isDefault) || warehouses[0];
+      if (defaultWh) {
+        setValue("warehouseId", defaultWh._id);
+      }
+    }
+  }, [warehouses, setValue]);
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
 
@@ -104,6 +123,7 @@ export default function Sales() {
         paymentType: data.paymentType,
         notes: data.notes,
         paidAmount: data.paymentType === 'Split' ? data.paidAmount : undefined,
+        warehouseId: data.warehouseId,
         items: validItems.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -148,6 +168,36 @@ export default function Sales() {
     
     setShowAddPayment(false);
     setIsViewOpen(false);
+  };
+
+  const handleOpenReturn = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setReturnItems(invoice.items.map((item) => ({
+      productId: item.product,
+      productName: item.productName,
+      max: item.quantity,
+      quantity: 0,
+      unitPrice: item.unitPrice,
+    })));
+    setReturnReason("");
+    setIsReturnOpen(true);
+    setIsViewOpen(false);
+  };
+
+  const handleSubmitReturn = async () => {
+    if (!selectedInvoice) return;
+    const validItems = returnItems.filter((i) => i.quantity > 0);
+    if (validItems.length === 0) {
+      toast.error("Enter at least one quantity to return.");
+      return;
+    }
+    await createCreditNote.mutateAsync({
+      invoiceId: selectedInvoice._id,
+      items: validItems.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+      reason: returnReason || "Product return",
+    });
+    setIsReturnOpen(false);
+    setSelectedInvoice(null);
   };
 
   return (
@@ -367,6 +417,14 @@ export default function Sales() {
                   ]}
                   name="paymentType" control={control} 
                 />
+                <div className="col-span-2">
+                  <FormSelect
+                    label="Dispatch Warehouse *"
+                    options={warehouses.map((w) => ({ value: w._id, label: w.name }))}
+                    name="warehouseId" control={control} required
+                    error={errors.warehouseId}
+                  />
+                </div>
               </div>
 
               {watch("paymentType") === "Split" && (
@@ -617,6 +675,22 @@ export default function Sales() {
 
             <div className="flex gap-3 pt-4 border-t border-border">
               <button onClick={() => { setIsViewOpen(false); setShowAddPayment(false); }} className="flex-1 h-10 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Close</button>
+              {/* Print Invoice */}
+              <button
+                onClick={() => window.open(`/sales/${selectedInvoice._id}/print`, "_blank")}
+                className="h-10 px-4 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors flex items-center gap-1.5 text-muted-foreground"
+              >
+                <Printer className="w-4 h-4" /> Print
+              </button>
+              {/* Return / Credit Note */}
+              {(selectedInvoice.status === "Paid" || selectedInvoice.status === "Credit" || selectedInvoice.status === "Overdue") && (
+                <button
+                  onClick={() => handleOpenReturn(selectedInvoice)}
+                  className="h-10 px-4 rounded-lg border border-warning/40 text-warning text-sm font-display font-semibold hover:bg-warning/10 transition-colors flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-4 h-4" /> Return
+                </button>
+              )}
               {(selectedInvoice.status === "Pending" || selectedInvoice.status === "Credit") && !showAddPayment && (
                 <button
                   onClick={() => {
@@ -628,6 +702,88 @@ export default function Sales() {
                   <Plus className="w-4 h-4" /> Add Payment
                 </button>
               )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {/* Return / Credit Note Modal */}
+      {mounted && isReturnOpen && selectedInvoice && createPortal(
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
+          <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="font-display font-bold text-lg text-foreground">Return / Credit Note</h2>
+                <p className="text-sm text-muted-foreground">Invoice: {selectedInvoice.invoiceNumber} · {selectedInvoice.customerName}</p>
+              </div>
+              <button onClick={() => setIsReturnOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 p-3 rounded-lg bg-warning/5 border border-warning/20">
+              <p className="text-xs text-warning font-medium">⚠️ Returned stock will be added back to inventory and customer outstanding will be reduced.</p>
+            </div>
+
+            <div className="space-y-3 mb-4">
+              <p className="text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Select Items & Quantities to Return</p>
+              {returnItems.map((item, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">{item.productName}</p>
+                    <p className="text-xs text-muted-foreground">Max returnable: {item.max} bags · ₹{item.unitPrice}/bag</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setReturnItems(prev => prev.map((it, idx) => idx === i ? { ...it, quantity: Math.max(0, it.quantity - 1) } : it))}
+                      className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-sm hover:bg-secondary transition-colors"
+                    >−</button>
+                    <span className="w-8 text-center font-display font-bold text-foreground">{item.quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => setReturnItems(prev => prev.map((it, idx) => idx === i ? { ...it, quantity: Math.min(it.max, it.quantity + 1) } : it))}
+                      className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-sm hover:bg-secondary transition-colors"
+                    >+</button>
+                  </div>
+                  <span className="w-24 text-right text-sm font-medium text-foreground">
+                    ₹{(item.quantity * item.unitPrice).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mb-4">
+              <p className="text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Reason for Return</p>
+              <textarea
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                rows={2}
+                placeholder="e.g., Damaged goods, Wrong product delivered..."
+                className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-brand/50 resize-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-warning/10 border border-warning/20 mb-4">
+              <span className="text-sm font-display font-semibold text-foreground">Credit Note Total</span>
+              <span className="text-lg font-display font-bold text-warning">
+                ₹{returnItems.reduce((s, i) => s + i.quantity * i.unitPrice, 0).toLocaleString("en-IN")}
+              </span>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setIsReturnOpen(false)} className="flex-1 h-10 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitReturn}
+                disabled={createCreditNote.isPending || returnItems.every(i => i.quantity === 0)}
+                className="flex-1 h-10 rounded-lg bg-warning text-white text-sm font-display font-semibold hover:bg-warning/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+              >
+                {createCreditNote.isPending ? (
+                  <><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /><span>Processing...</span></>
+                ) : "Issue Credit Note"}
+              </button>
             </div>
           </div>
         </div>,

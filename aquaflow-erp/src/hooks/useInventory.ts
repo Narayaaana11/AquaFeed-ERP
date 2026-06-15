@@ -39,3 +39,16 @@ export function useAdjustInventory() {
     onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to adjust stock'),
   });
 }
+
+export function useWarehouseInventory(warehouseId: string) {
+  return useQuery({
+    queryKey: ['inventory', 'warehouse', warehouseId],
+    queryFn: async () => {
+      if (!warehouseId) return [];
+      const { data } = await api.get(`/inventory/warehouse/${warehouseId}`);
+      return data.data;
+    },
+    enabled: !!warehouseId,
+    staleTime: 15000,
+  });
+}

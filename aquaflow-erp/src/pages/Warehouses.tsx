@@ -4,11 +4,12 @@ import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/StatusBadge";
 import { FormInput, FormNumber } from "@/components/forms";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Plus, Warehouse as WarehouseIcon, Pencil, Trash2, X, CheckCircle2 } from "lucide-react";
+import { Plus, Warehouse as WarehouseIcon, Pencil, Trash2, X, CheckCircle2, Package, Boxes } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { useWarehouses, useCreateWarehouse, useUpdateWarehouse, useDeleteWarehouse, type Warehouse } from "@/hooks/useWarehouses";
+import { useWarehouseInventory } from "@/hooks/useInventory";
 
 interface WarehouseFormData {
   name: string;
@@ -27,6 +28,7 @@ export default function Warehouses() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isStocksOpen, setIsStocksOpen] = useState(false);
 
   const { data: warehouses = [], isLoading } = useWarehouses();
   const createWarehouse = useCreateWarehouse();
@@ -166,13 +168,21 @@ export default function Warehouses() {
                 </div>
               </div>
 
-              <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-                <button onClick={() => handleEdit(wh)} className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-secondary transition-colors">
-                  <Pencil className="w-3.5 h-3.5" /> Edit
+              <div className="space-y-2 mt-4 pt-4 border-t border-border">
+                <button
+                  onClick={() => { setSelectedWarehouse(wh); setIsStocksOpen(true); }}
+                  className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg bg-brand-light text-brand text-xs font-display font-semibold hover:bg-brand-light/85 transition-colors"
+                >
+                  <Boxes className="w-4 h-4" /> View Stocks
                 </button>
-                <button onClick={() => { setSelectedWarehouse(wh); setIsDeleteOpen(true); }} className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg border border-destructive/20 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => handleEdit(wh)} className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-secondary transition-colors">
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button onClick={() => { setSelectedWarehouse(wh); setIsDeleteOpen(true); }} className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg border border-destructive/20 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -181,6 +191,7 @@ export default function Warehouses() {
 
       {isAddOpen && <WarehouseForm reg={regAdd} submit={handleAddSubmit(onAddSubmit)} errs={addErrors} isSubmitting={createWarehouse.isPending} title="Add Warehouse" onClose={() => setIsAddOpen(false)} />}
       {isEditOpen && selectedWarehouse && <WarehouseForm reg={regEdit} submit={handleEditSubmit(onEditSubmit)} errs={editErrors} isSubmitting={updateWarehouse.isPending} title="Edit Warehouse" onClose={() => { setIsEditOpen(false); setSelectedWarehouse(null); }} />}
+      {isStocksOpen && selectedWarehouse && <WarehouseStocksModal warehouse={selectedWarehouse} onClose={() => { setIsStocksOpen(false); setSelectedWarehouse(null); }} />}
 
       <ConfirmDialog
         isOpen={isDeleteOpen}
@@ -195,3 +206,92 @@ export default function Warehouses() {
     </AppLayout>
   );
 }
+
+const WarehouseStocksModal = ({ warehouse, onClose }: { warehouse: Warehouse; onClose: () => void }) => {
+  const { data: stocks = [], isLoading } = useWarehouseInventory(warehouse._id);
+
+  const totalStock = stocks.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+  const capacity = warehouse.capacity || 0;
+  const utilization = capacity > 0 ? Math.min(100, Math.round((totalStock / capacity) * 100)) : 0;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+      <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-display font-bold text-lg text-foreground">Stocks in {warehouse.name}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Location: {warehouse.city || "N/A"}</p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Capacity utilization */}
+        {capacity > 0 && (
+          <div className="mb-5 p-4 rounded-xl bg-secondary border border-border">
+            <div className="flex items-center justify-between text-xs mb-1.5 font-medium">
+              <span className="text-muted-foreground">Capacity Utilization</span>
+              <span className="text-foreground">{totalStock} / {capacity} bags ({utilization}%)</span>
+            </div>
+            <div className="h-2 w-full bg-border rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ${
+                  utilization > 90 ? 'bg-destructive' : utilization > 75 ? 'bg-warning' : 'bg-brand'
+                }`}
+                style={{ width: `${utilization}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-6 h-6 rounded-full border-2 border-brand/20 border-t-brand animate-spin" />
+          </div>
+        ) : stocks.length === 0 ? (
+          <div className="text-center py-12 bg-secondary/20 rounded-xl border border-dashed border-border p-4">
+            <Package className="w-8 h-8 text-muted-foreground/60 mx-auto mb-2" />
+            <p className="text-sm font-medium text-foreground">No stock inside this warehouse</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Add inventory or record a transfer to store feed here.</p>
+          </div>
+        ) : (
+          <div className="border border-border rounded-xl overflow-hidden shadow-card">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-secondary/50 text-xs font-display font-semibold text-muted-foreground uppercase">
+                  <th className="px-4 py-2 text-left">Product</th>
+                  <th className="px-4 py-2 text-right">Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stocks.map((item: any) => (
+                  <tr key={item._id} className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-foreground">{item.product?.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{item.product?.brand}</p>
+                    </td>
+                    <td className="px-4 py-3 text-right font-display font-semibold text-foreground">
+                      {item.quantity} <span className="text-xs font-normal text-muted-foreground">bags</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-6">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="w-full h-10 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};

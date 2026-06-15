@@ -4,6 +4,8 @@ const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const Company = require('../models/Company');
 const StockAdjustment = require('../models/StockAdjustment');
+const Warehouse = require('../models/Warehouse');
+const Inventory = require('../models/Inventory');
 const { emitInvoiceCreated, emitInvoiceUpdated, emitInvoiceDeleted, emitInvoicePaid, emitDashboardUpdate, emitLowStockAlert } = require('../utils/websocket');
 
 // Generate next invoice number
@@ -69,7 +71,7 @@ const createInvoice = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { customerId, items, paymentType, notes, gstRate, paidAmount } = req.body;
+    const { customerId, items, paymentType, notes, gstRate, paidAmount, warehouseId } = req.body;
 
     const customer = await Customer.findOne({ _id: customerId, company: req.companyId }).session(session);
     if (!customer) {
@@ -80,6 +82,25 @@ const createInvoice = async (req, res, next) => {
 
     const company = await Company.findById(req.companyId).session(session);
     const invoiceGstRate = gstRate ?? company.gstRate ?? 5;
+
+    // Find warehouse
+    let targetWarehouseId = warehouseId;
+    if (!targetWarehouseId) {
+      const defaultWh = await Warehouse.findOne({ company: req.companyId, isDefault: true }).session(session);
+      if (!defaultWh) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({ success: false, message: 'No default warehouse configured for this company.' });
+      }
+      targetWarehouseId = defaultWh._id;
+    }
+
+    const warehouseObj = await Warehouse.findOne({ _id: targetWarehouseId, company: req.companyId }).session(session);
+    if (!warehouseObj) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ success: false, message: 'Warehouse not found.' });
+    }
 
     // Build line items with stock check
     let subtotal = 0;
@@ -92,14 +113,25 @@ const createInvoice = async (req, res, next) => {
         session.endSession();
         return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
       }
-      if (product.stock < item.quantity) {
+
+      // Check stock inside the selected warehouse
+      const invRecord = await Inventory.findOne({
+        product: product._id,
+        warehouse: targetWarehouseId,
+        company: req.companyId,
+      }).session(session);
+
+      const availableStock = invRecord ? invRecord.quantity : 0;
+
+      if (availableStock < item.quantity) {
         await session.abortTransaction();
         session.endSession();
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`,
+          message: `Insufficient stock for "${product.name}" in warehouse "${warehouseObj.name}". Available: ${availableStock}, Requested: ${item.quantity}`,
         });
       }
+
       const lineTotal = item.quantity * (item.unitPrice || product.price);
       subtotal += lineTotal;
       lineItems.push({
@@ -171,10 +203,24 @@ const createInvoice = async (req, res, next) => {
     for (const item of items) {
       const product = await Product.findById(item.productId).session(session);
       const prevStock = product.stock;
+
+      // Deduct from warehouse inventory
+      const invRecord = await Inventory.findOne({
+        product: product._id,
+        warehouse: targetWarehouseId,
+        company: req.companyId,
+      }).session(session);
+
+      invRecord.quantity -= item.quantity;
+      await invRecord.save({ session });
+
+      // Deduct from global stock
       product.stock -= item.quantity;
       await product.save({ session });
+
       await StockAdjustment.create([{
         product: product._id,
+        warehouse: targetWarehouseId,
         type: 'sale',
         quantity: item.quantity,
         previousStock: prevStock,
@@ -323,4 +369,144 @@ const addPayment = async (req, res, next) => {
   }
 };
 
-module.exports = { getInvoices, getInvoice, createInvoice, updateInvoiceStatus, deleteInvoice, addPayment };
+// PUT /api/sales/:id — edit a Pending or Credit invoice
+const updateInvoice = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const invoice = await Invoice.findOne({ _id: req.params.id, company: req.companyId }).session(session);
+    if (!invoice) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ success: false, message: 'Invoice not found.' });
+    }
+    if (invoice.status === 'Paid' || invoice.status === 'Cancelled') {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, message: 'Cannot edit a Paid or Cancelled invoice.' });
+    }
+
+    const { items, notes, paymentType, gstRate, warehouseId } = req.body;
+    const targetWarehouseId = warehouseId || invoice.warehouse;
+
+    // 1. Restore stock from old line items
+    for (const oldItem of invoice.items) {
+      const product = await Product.findById(oldItem.product).session(session);
+      if (!product) continue;
+
+      product.stock += oldItem.quantity;
+      await product.save({ session });
+
+      const invRecord = await Inventory.findOne({
+        product: product._id,
+        warehouse: targetWarehouseId,
+        company: req.companyId,
+      }).session(session);
+      if (invRecord) {
+        invRecord.quantity += oldItem.quantity;
+        await invRecord.save({ session });
+      }
+    }
+
+    // 2. Validate and build new line items
+    const company = await Company.findById(req.companyId).session(session);
+    const invoiceGstRate = gstRate ?? invoice.gstRate;
+    let subtotal = 0;
+    const lineItems = [];
+
+    for (const item of items) {
+      const product = await Product.findOne({ _id: item.productId, company: req.companyId }).session(session);
+      if (!product) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
+      }
+
+      const invRecord = await Inventory.findOne({
+        product: product._id,
+        warehouse: targetWarehouseId,
+        company: req.companyId,
+      }).session(session);
+
+      const availableStock = invRecord ? invRecord.quantity : 0;
+      if (availableStock < item.quantity) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for "${product.name}". Available: ${availableStock}, Requested: ${item.quantity}`,
+        });
+      }
+
+      const lineTotal = item.quantity * (item.unitPrice || product.price);
+      subtotal += lineTotal;
+      lineItems.push({
+        product: product._id,
+        productName: product.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice || product.price,
+        discount: item.discount || 0,
+        lineTotal,
+      });
+    }
+
+    const gstAmount = Math.round(subtotal * (invoiceGstRate / 100));
+    const total = subtotal + gstAmount;
+
+    // 3. Deduct stock for new line items
+    for (const item of items) {
+      const product = await Product.findById(item.productId).session(session);
+      const invRecord = await Inventory.findOne({
+        product: product._id,
+        warehouse: targetWarehouseId,
+        company: req.companyId,
+      }).session(session);
+
+      invRecord.quantity -= item.quantity;
+      await invRecord.save({ session });
+      product.stock -= item.quantity;
+      await product.save({ session });
+
+      await StockAdjustment.create([{
+        product: product._id,
+        warehouse: targetWarehouseId,
+        type: 'sale',
+        quantity: item.quantity,
+        previousStock: product.stock + item.quantity,
+        newStock: product.stock,
+        reason: `Invoice Edit - ${invoice.invoiceNumber}`,
+        reference: invoice.invoiceNumber,
+        createdBy: req.user._id,
+        company: req.companyId,
+      }], { session });
+    }
+
+    // 4. Update invoice fields
+    invoice.items = lineItems;
+    invoice.subtotal = subtotal;
+    invoice.gstRate = invoiceGstRate;
+    invoice.gstAmount = gstAmount;
+    invoice.total = total;
+    invoice.warehouse = targetWarehouseId;
+    if (notes !== undefined) invoice.notes = notes;
+    if (paymentType) invoice.paymentType = paymentType;
+
+    await invoice.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    const populated = await Invoice.findById(invoice._id).populate('customer', 'name phone');
+    const io = req.app.locals.io;
+    if (io) emitInvoiceUpdated(io, req.companyId, populated);
+
+    res.json({ success: true, data: populated });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    next(err);
+  }
+};
+
+module.exports = { getInvoices, getInvoice, createInvoice, updateInvoice, updateInvoiceStatus, deleteInvoice, addPayment };
+

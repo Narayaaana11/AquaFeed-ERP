@@ -26,6 +26,9 @@ const warehouseRoutes = require('./routes/warehouses');
 const inventoryRoutes = require('./routes/inventory');
 const reportsRoutes = require('./routes/reports');
 const settingsRoutes = require('./routes/settings');
+const supplierRoutes = require('./routes/suppliers');
+const purchaseOrderRoutes = require('./routes/purchaseOrders');
+const creditNoteRoutes = require('./routes/creditNotes');
 
 const app = express();
 const server = http.createServer(app);
@@ -244,6 +247,9 @@ app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/purchase-orders', purchaseOrderRoutes);
+app.use('/api/credit-notes', creditNoteRoutes);
 
 // Serve React frontend only if the dist folder exists (self-hosted / same-server deploy).
 // When frontend is on Vercel and backend is on Render, dist won't exist — skip silently.
@@ -264,6 +270,33 @@ if (fs.existsSync(frontendBuildPath)) {
 
 // Error handler (must be last)
 app.use(errorHandler);
+
+// ─── Overdue Invoice Scheduler ───────────────────────────────────────────────
+// Runs every 6 hours to flip Credit invoices past their dueDate to Overdue
+const Invoice = require('./models/Invoice');
+const markOverdueInvoices = async () => {
+  try {
+    const now = new Date();
+    const result = await Invoice.updateMany(
+      { status: 'Credit', dueDate: { $lt: now } },
+      { $set: { status: 'Overdue' } }
+    );
+    if (result.modifiedCount > 0) {
+      console.log(`⏰ Marked ${result.modifiedCount} invoice(s) as Overdue`);
+      // Emit to all connected company rooms if io is available
+      if (io) {
+        io.emit('invoices_overdue_updated', { count: result.modifiedCount });
+      }
+    }
+  } catch (err) {
+    console.error('❌ Overdue scheduler error:', err.message);
+  }
+};
+
+// Run immediately on startup, then every 6 hours
+markOverdueInvoices();
+setInterval(markOverdueInvoices, 6 * 60 * 60 * 1000);
+// ─────────────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

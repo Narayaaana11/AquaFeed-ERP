@@ -159,3 +159,26 @@ export function useAddInvoicePayment() {
     onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to add payment'),
   });
 }
+
+export function useUpdateInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...body }: {
+      id: string;
+      items: { productId: string; quantity: number; unitPrice?: number }[];
+      notes?: string;
+      paymentType?: string;
+      gstRate?: number;
+    }) => {
+      const { data } = await api.put(`/sales/${id}`, body);
+      return data.data as Invoice;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['sales'] });
+      qc.invalidateQueries({ queryKey: ['inventory'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Invoice updated!');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to update invoice'),
+  });
+}

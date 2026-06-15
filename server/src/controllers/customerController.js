@@ -109,4 +109,48 @@ const getOverdueCustomers = async (req, res, next) => {
   }
 };
 
-module.exports = { getCustomers, getCustomer, createCustomer, updateCustomer, deleteCustomer, getOverdueCustomers };
+// GET /api/customers/:id/ledger
+const getCustomerLedger = async (req, res, next) => {
+  try {
+    const Invoice = require('../models/Invoice');
+
+    const customer = await Customer.findOne({ _id: req.params.id, company: req.companyId });
+    if (!customer) return res.status(404).json({ success: false, message: 'Customer not found.' });
+
+    const invoices = await Invoice.find({
+      customer: req.params.id,
+      company: req.companyId,
+      status: { $nin: ['Cancelled'] },
+    }).sort({ createdAt: 1 });
+
+    let runningBalance = 0;
+    const entries = invoices.map((inv) => {
+      const debit = inv.total;
+      const credit = inv.paidAmount || 0;
+      runningBalance += debit - credit;
+      return {
+        date: inv.createdAt,
+        invoiceNumber: inv.invoiceNumber,
+        type: inv.status,
+        debit,
+        credit,
+        balance: runningBalance,
+        _id: inv._id,
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        customer,
+        entries,
+        totalOutstanding: runningBalance,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getCustomers, getCustomer, createCustomer, updateCustomer, deleteCustomer, getOverdueCustomers, getCustomerLedger };
+

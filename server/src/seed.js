@@ -147,6 +147,31 @@ const seed = async () => {
   const products = await Product.insertMany(productsData.map((p) => ({ ...p, company: company._id })));
   console.log(`✅ ${products.length} products created`);
 
+  // Create Inventory entries for warehouses
+  const inventoryEntries = [];
+  for (const p of products) {
+    inventoryEntries.push({
+      product: p._id,
+      warehouse: warehouse1._id,
+      quantity: p.stock,
+      company: company._id,
+    });
+    inventoryEntries.push({
+      product: p._id,
+      warehouse: warehouse2._id,
+      quantity: 0,
+      company: company._id,
+    });
+    inventoryEntries.push({
+      product: p._id,
+      warehouse: warehouse3._id,
+      quantity: 0,
+      company: company._id,
+    });
+  }
+  await Inventory.insertMany(inventoryEntries);
+  console.log(`✅ ${inventoryEntries.length} inventory records created`);
+
   // Create Customers
   const customersData = [
     { name: 'Ravi Kumar Fisheries', phone: '9812345678', email: 'ravi@ravifisheries.com', city: 'Vijayawada', type: 'Wholesale', creditLimit: 100000, outstandingBalance: 21300 },
