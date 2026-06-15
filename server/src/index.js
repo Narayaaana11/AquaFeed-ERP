@@ -16,6 +16,7 @@ const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const { verify } = require('jsonwebtoken');
+const compression = require('compression');
 
 // Route imports
 const productRoutes = require('./routes/products');
@@ -213,6 +214,7 @@ io.on('connection', (socket) => {
 app.locals.io = io;
 
 // Middleware
+app.use(compression());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));

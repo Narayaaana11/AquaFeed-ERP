@@ -23,8 +23,18 @@ import CreditNotes from "./pages/CreditNotes.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { WebSocketProvider } from "@/hooks/useWebSocketContext";
 import { AppLogo } from "@/components/AppLogo";
+import api from "@/lib/api";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30 * 1000, // 30 seconds cache validity
+      gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
+      refetchOnWindowFocus: false, // Disable automatic refetch on window focus
+      retry: 1, // Limit retries to 1 to fail fast if backend is down
+    },
+  },
+});
 
 // Protected layout wrapper that hosts the WebSocketProvider
 const ProtectedLayout = () => {
@@ -58,19 +68,41 @@ const ProtectedLayout = () => {
 
 const App = () => {
   const [isReady, setIsReady] = useState(false);
+  const [loadingText, setLoadingText] = useState("Loading AquaFeed ERP...");
+  const [isServerWaking, setIsServerWaking] = useState(false);
 
   useEffect(() => {
-    // Simulate app initialization
-    setIsReady(true);
+    // Start pre-warm wake-up call to the Render backend immediately on load
+    const wakeUpTimer = setTimeout(() => {
+      setIsServerWaking(true);
+      setLoadingText("Waking up server (Render Free Tier cold start, this might take up to a minute)...");
+    }, 1500);
+
+    api.get("/health")
+      .then(() => {
+        clearTimeout(wakeUpTimer);
+        setIsReady(true);
+      })
+      .catch((err) => {
+        // Fallback to loading the app even if health check fails so the user is not blocked
+        console.warn("⚠️ Health check pre-warm failed or timed out:", err);
+        clearTimeout(wakeUpTimer);
+        setIsReady(true);
+      });
   }, []);
 
   if (!isReady) {
     return (
       <div className="w-screen h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
+        <div className="text-center max-w-sm px-6">
           <AppLogo size="lg" className="mx-auto mb-4" />
           <div className="w-8 h-8 rounded-full border-4 border-brand/20 border-t-brand animate-spin mx-auto mb-4" />
-          <p className="text-sm text-muted-foreground">Loading AquaFeed ERP...</p>
+          <p className="text-sm text-muted-foreground transition-all duration-300">{loadingText}</p>
+          {isServerWaking && (
+            <p className="text-[11px] text-muted-foreground/60 mt-2 italic animate-pulse">
+              Services on free hosting platforms spin down after inactivity. Thank you for your patience!
+            </p>
+          )}
         </div>
       </div>
     );
