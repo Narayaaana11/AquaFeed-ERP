@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { usePurchaseOrders, useCreatePO, useReceivePO, useCancelPO, type PurchaseOrder } from "@/hooks/usePurchaseOrders";
+import { usePurchaseOrders as usePurchaseOrdersWS } from "@/hooks/useModuleWebSocket";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useProducts } from "@/hooks/useProducts";
 import { useWarehouses } from "@/hooks/useWarehouses";
@@ -42,8 +43,14 @@ export default function PurchaseOrders() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const { data: posResult, isLoading } = usePurchaseOrders({ status: statusFilter === "All" ? undefined : statusFilter });
+  const { data: posResult, isLoading, refetch } = usePurchaseOrders({ status: statusFilter === "All" ? undefined : statusFilter });
   const pos = posResult?.data ?? [];
+
+  // WebSocket real-time updates
+  usePurchaseOrdersWS(
+    () => { console.log('🛒 PO created via WebSocket'); refetch(); },
+    () => { console.log('✅ PO received via WebSocket'); refetch(); }
+  );
 
   const createPO = useCreatePO();
   const receivePO = useReceivePO();

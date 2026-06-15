@@ -194,6 +194,16 @@ io.on('connection', (socket) => {
     console.log(`🏢 User ${socket.userId} joined company notifications`);
   });
 
+  // Purchase Orders subscriptions
+  socket.on('subscribe_purchase_orders', () => {
+    socket.join(`company_${socket.companyId}`);
+    console.log(`🛒 User ${socket.userId} subscribed to purchase order updates`);
+  });
+
+  socket.on('unsubscribe_purchase_orders', () => {
+    socket.leave(`company_${socket.companyId}`);
+  });
+
   socket.on('disconnect', () => {
     console.log(`❌ User ${socket.userId} disconnected`);
   });

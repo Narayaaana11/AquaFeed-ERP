@@ -298,7 +298,7 @@ export default function Products() {
         <SelectContent>
           
             <SelectItem value={"All Brands".toString()}>All Brands</SelectItem>
-            {brands.map((b) => <SelectItem value={{b}.toString()}>{b}</SelectItem>)}
+            {brands.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
           
         </SelectContent>
       </Select>

@@ -105,7 +105,7 @@ export function ProductCatalogBrowser({ onSelect, onClose }: ProductCatalogBrows
           
               <SelectItem value={"All".toString()}>All Brands</SelectItem>
               {CATALOG_BRANDS.map((b) => (
-                <SelectItem value={{b}.toString()}>{b}</SelectItem>
+                <SelectItem key={b} value={b}>{b}</SelectItem>
               ))}
             
         </SelectContent>
@@ -120,7 +120,7 @@ export function ProductCatalogBrowser({ onSelect, onClose }: ProductCatalogBrows
           
               <SelectItem value={"All".toString()}>All Categories</SelectItem>
               {CATALOG_CATEGORIES.map((c) => (
-                <SelectItem value={{c}.toString()}>{c}</SelectItem>
+                <SelectItem key={c} value={c}>{c}</SelectItem>
               ))}
             
         </SelectContent>

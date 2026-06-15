@@ -212,3 +212,39 @@ export function useCustomers(onCustomerCreated?: (customer: any) => void, onCust
 
     return customerUpdates;
 }
+
+/**
+ * usePurchaseOrders - WebSocket hook for purchase order updates
+ */
+export function usePurchaseOrders(onPOCreated?: (po: any) => void, onPOReceived?: (po: any) => void) {
+    const { isConnected, subscribe, on, off } = useWebSocketContext();
+    const [poUpdates, setPoUpdates] = useState<any>(null);
+
+    useEffect(() => {
+        if (isConnected) {
+            subscribe('company');
+
+            const handlePOCreated = (po: any) => {
+                console.log('🛒 Purchase order created:', po);
+                setPoUpdates({ type: 'created', po });
+                onPOCreated?.(po);
+            };
+
+            const handlePOReceived = (po: any) => {
+                console.log('✅ Purchase order received:', po);
+                setPoUpdates({ type: 'received', po });
+                onPOReceived?.(po);
+            };
+
+            on('po_created', handlePOCreated);
+            on('po_received', handlePOReceived);
+
+            return () => {
+                off('po_created');
+                off('po_received');
+            };
+        }
+    }, [isConnected, subscribe, on, off, onPOCreated, onPOReceived]);
+
+    return poUpdates;
+}

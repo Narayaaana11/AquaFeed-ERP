@@ -179,7 +179,7 @@ export default function Customers() {
         <SelectContent>
           
           <SelectItem value={"All".toString()}>All Types</SelectItem>
-          {customerTypes.map((t) => <SelectItem value={{t}.toString()}>{t}</SelectItem>)}
+          {customerTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
         
         </SelectContent>
       </Select>

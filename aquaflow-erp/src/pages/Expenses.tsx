@@ -163,7 +163,7 @@ export default function Expenses() {
         <SelectContent>
           
           <SelectItem value={"All".toString()}>All Categories</SelectItem>
-          {EXPENSE_CATEGORIES.map((c) => <SelectItem value={{c}.toString()}>{c}</SelectItem>)}
+          {EXPENSE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
         
         </SelectContent>
       </Select>
