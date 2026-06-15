@@ -11,6 +11,9 @@ const Invoice = require('./models/Invoice');
 const Expense = require('./models/Expense');
 const StockAdjustment = require('./models/StockAdjustment');
 const Inventory = require('./models/Inventory');
+const Supplier = require('./models/Supplier');
+const PurchaseOrder = require('./models/PurchaseOrder');
+const CreditNote = require('./models/CreditNote');
 
 const connectDB = require('./config/db');
 
@@ -29,6 +32,9 @@ const seed = async () => {
     Expense.deleteMany({}),
     StockAdjustment.deleteMany({}),
     Inventory.deleteMany({}),
+    Supplier.deleteMany({}),
+    PurchaseOrder.deleteMany({}),
+    CreditNote.deleteMany({}),
   ]);
   console.log('🧹 Cleared existing data');
 
@@ -172,6 +178,71 @@ const seed = async () => {
   await Inventory.insertMany(inventoryEntries);
   console.log(`✅ ${inventoryEntries.length} inventory records created`);
 
+  // Create Suppliers
+  const suppliersData = [
+    { name: 'Royal Fish Feeds Inc.', contactPerson: 'Srinivas Rao', phone: '9848012345', email: 'srinivas@royalfeeds.com', address: 'Plot 24, Industrial Area', city: 'Vijayawada', state: 'Andhra Pradesh', gstNumber: '37AABCR1234F1Z1', paymentTerms: 'Net30', outstandingBalance: 45000 },
+    { name: 'Apex Biotech Feed', contactPerson: 'Dr. John Mathew', phone: '9866054321', email: 'info@apexbiotech.com', address: 'Sector 3, APIIC Zone', city: 'Kakinada', state: 'Andhra Pradesh', gstNumber: '37AAICA5678B2Z2', paymentTerms: 'Net15', outstandingBalance: 0 },
+    { name: 'Coastal Feed Milling', contactPerson: 'Balu G.', phone: '9849098765', email: 'balu@coastalfeed.com', address: 'Near Port Area', city: 'Visakhapatnam', state: 'Andhra Pradesh', gstNumber: '37AAFCF9012C3Z3', paymentTerms: 'Cash', outstandingBalance: 12000 },
+  ];
+
+  const suppliers = await Supplier.insertMany(suppliersData.map((s) => ({ ...s, company: company._id })));
+  console.log(`✅ ${suppliers.length} suppliers created`);
+
+  // Create Purchase Orders
+  const po1Product1 = products[0];
+  const po1Product2 = products[1];
+  const po1qty1 = 50;
+  const po1qty2 = 40;
+  const cost1 = po1Product1.purchasePrice;
+  const cost2 = po1Product2.purchasePrice;
+  const line1Total = po1qty1 * cost1;
+  const line2Total = po1qty2 * cost2;
+  const subtotalPo1 = line1Total + line2Total;
+
+  await PurchaseOrder.create({
+    poNumber: 'PO-0001',
+    supplier: suppliers[0]._id,
+    supplierName: suppliers[0].name,
+    items: [
+      { product: po1Product1._id, productName: po1Product1.name, quantity: po1qty1, unitCost: cost1, lineTotal: line1Total },
+      { product: po1Product2._id, productName: po1Product2.name, quantity: po1qty2, unitCost: cost2, lineTotal: line2Total }
+    ],
+    subtotal: subtotalPo1,
+    totalAmount: subtotalPo1,
+    status: 'Received',
+    expectedDate: new Date(2026, 4, 15),
+    receivedDate: new Date(2026, 4, 16),
+    notes: 'Urgent stocking for seasonal demand',
+    warehouse: warehouse1._id,
+    receivedBy: owner._id,
+    createdBy: owner._id,
+    company: company._id
+  });
+
+  const po2Product = products[2];
+  const po2qty = 100;
+  const cost3 = po2Product.purchasePrice;
+  const line3Total = po2qty * cost3;
+  const subtotalPo2 = line3Total;
+
+  await PurchaseOrder.create({
+    poNumber: 'PO-0002',
+    supplier: suppliers[1]._id,
+    supplierName: suppliers[1].name,
+    items: [
+      { product: po2Product._id, productName: po2Product.name, quantity: po2qty, unitCost: cost3, lineTotal: line3Total }
+    ],
+    subtotal: subtotalPo2,
+    totalAmount: subtotalPo2,
+    status: 'Ordered',
+    expectedDate: new Date(2026, 6, 20),
+    notes: 'Regular monthly order',
+    warehouse: warehouse1._id,
+    createdBy: owner._id,
+    company: company._id
+  });
+  console.log('✅ Purchase Orders created');
+
   // Create Customers
   const customersData = [
     { name: 'Ravi Kumar Fisheries', phone: '9812345678', email: 'ravi@ravifisheries.com', city: 'Vijayawada', type: 'Wholesale', creditLimit: 100000, outstandingBalance: 21300 },
@@ -238,8 +309,34 @@ const seed = async () => {
     }
   }
 
-  await Invoice.insertMany(invoices);
-  console.log(`✅ ${invoices.length} invoices created`);
+  const createdInvoices = await Invoice.insertMany(invoices);
+  console.log(`✅ ${createdInvoices.length} invoices created`);
+
+  // Create Credit Notes
+  if (createdInvoices.length > 0) {
+    const targetInv = createdInvoices[0];
+    const targetItem = targetInv.items[0];
+    const cnQty = 1;
+    const cnLineTotal = cnQty * targetItem.unitPrice;
+
+    await CreditNote.create({
+      creditNoteNumber: 'CN-0001',
+      originalInvoice: targetInv._id,
+      originalInvoiceNumber: targetInv.invoiceNumber,
+      customer: targetInv.customer,
+      customerName: targetInv.customerName,
+      items: [
+        { product: targetItem.product, productName: targetItem.productName, quantity: cnQty, unitPrice: targetItem.unitPrice, lineTotal: cnLineTotal }
+      ],
+      reason: 'Bags damaged during transport',
+      totalAmount: cnLineTotal,
+      status: 'Applied',
+      warehouse: warehouse1._id,
+      createdBy: owner._id,
+      company: company._id
+    });
+    console.log('✅ Credit Notes created');
+  }
 
   // Update invoice counter
   await Company.findByIdAndUpdate(company._id, { invoiceCounter: invCounter });
