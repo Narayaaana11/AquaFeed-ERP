@@ -452,84 +452,133 @@ export default function Settings() {
                 No team members found.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-background">
-                      {["Employee", "Email", "Role", "Status", "Actions"].map(
-                        (h) => (
-                          <th
-                            key={h}
-                            className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide"
-                          >
-                            {h}
-                          </th>
-                        ),
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {employees.map((e) => (
-                      <tr
-                        key={e._id}
-                        className="border-b border-border last:border-0 hover:bg-background transition-colors"
-                      >
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-brand-light flex items-center justify-center text-brand font-bold text-xs shrink-0">
-                              {e.name.charAt(0)}
-                            </div>
-                            <span className="font-medium text-foreground">
-                              {e.name}
-                            </span>
+              <>
+                {/* Mobile Card List */}
+                <div className="sm:hidden divide-y divide-border">
+                  {employees.map((e) => (
+                    <div key={e._id} className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-brand-light flex items-center justify-center text-brand font-bold text-xs shrink-0">
+                            {e.name.charAt(0)}
                           </div>
-                        </td>
-                        <td className="px-4 py-3.5 text-muted-foreground text-xs">
-                          {e.email}
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-xs font-medium ${roleColor[e.role] || "bg-secondary"}`}
+                          <div>
+                            <p className="font-medium text-foreground text-sm">{e.name}</p>
+                            <p className="text-xs text-muted-foreground">{e.email}</p>
+                          </div>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${roleColor[e.role] || "bg-secondary"}`}>
+                          {e.role}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${e.isActive ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
+                          {e.isActive ? "Active" : "Inactive"}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleEditEmployee(e)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors"
                           >
-                            {e.role}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-xs font-medium ${e.isActive
-                                ? "bg-success/10 text-success"
-                                : "bg-muted text-muted-foreground"
-                              }`}
-                          >
-                            {e.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-2">
+                            <Pencil className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          {e.isActive && (
                             <button
-                              onClick={() => handleEditEmployee(e)}
-                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors"
+                              onClick={() => {
+                                setSelectedEmployee(e);
+                                setIsDeleteOpen(true);
+                              }}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
                             >
-                              <Pencil className="w-3.5 h-3.5" /> Edit
+                              <Trash2 className="w-3.5 h-3.5" /> Deactivate
                             </button>
-                            {e.isActive && (
-                              <button
-                                onClick={() => {
-                                  setSelectedEmployee(e);
-                                  setIsDeleteOpen(true);
-                                }}
-                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" /> Deactivate
-                              </button>
-                            )}
-                          </div>
-                        </td>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-background">
+                        {["Employee", "Email", "Role", "Status", "Actions"].map(
+                          (h) => (
+                            <th
+                              key={h}
+                              className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide"
+                            >
+                              {h}
+                            </th>
+                          ),
+                        )}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {employees.map((e) => (
+                        <tr
+                          key={e._id}
+                          className="border-b border-border last:border-0 hover:bg-background transition-colors"
+                        >
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-brand-light flex items-center justify-center text-brand font-bold text-xs shrink-0">
+                                {e.name.charAt(0)}
+                              </div>
+                              <span className="font-medium text-foreground">
+                                {e.name}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5 text-muted-foreground text-xs">
+                            {e.email}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium ${roleColor[e.role] || "bg-secondary"}`}
+                            >
+                              {e.role}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium ${e.isActive
+                                  ? "bg-success/10 text-success"
+                                  : "bg-muted text-muted-foreground"
+                                }`}
+                            >
+                              {e.isActive ? "Active" : "Inactive"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEditEmployee(e)}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors"
+                              >
+                                <Pencil className="w-3.5 h-3.5" /> Edit
+                              </button>
+                              {e.isActive && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedEmployee(e);
+                                    setIsDeleteOpen(true);
+                                  }}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" /> Deactivate
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -537,8 +586,8 @@ export default function Settings() {
 
       {/* Add Employee Modal */}
       {mounted && isAddEmployeeOpen && createPortal(
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-          <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+          <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display font-bold text-lg text-foreground">
                 Add Employee
@@ -619,8 +668,8 @@ export default function Settings() {
 
       {/* Edit Employee Modal */}
       {isEditEmployeeOpen && selectedEmployee && (
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display font-bold text-lg text-foreground">
                 Edit Employee
@@ -721,8 +770,8 @@ export default function Settings() {
 
       {/* Clear Data — Password Prompt Modal (Owner Only) */}
       {mounted && isClearConfirmOpen && createPortal(
-        <div className="fixed inset-0 bg-foreground/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-          <div className="bg-surface rounded-2xl border border-destructive/30 shadow-panel w-full max-w-md p-6">
+        <div className="fixed inset-0 bg-foreground/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+          <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-destructive/30 shadow-panel w-full sm:max-w-md p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
                 <ShieldAlert className="w-5 h-5 text-destructive" />

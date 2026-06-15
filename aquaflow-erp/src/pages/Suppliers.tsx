@@ -88,8 +88,8 @@ export default function Suppliers() {
 
   const SupplierForm = ({ form, onSubmit, isPending, submitLabel }: any) => (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="col-span-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="col-span-1 sm:col-span-2">
           <FormInput
             label="Supplier / Company Name *"
             placeholder="e.g. Growel Feeds Ltd."
@@ -128,7 +128,7 @@ export default function Suppliers() {
           placeholder="Andhra Pradesh"
           {...form.register("state")}
         />
-        <div className="col-span-2">
+        <div className="col-span-1 sm:col-span-2">
           <FormSelect
             label="Payment Terms"
             options={PAYMENT_TERMS}
@@ -136,7 +136,7 @@ export default function Suppliers() {
             control={form.control}
           />
         </div>
-        <div className="col-span-2">
+        <div className="col-span-1 sm:col-span-2">
           <label className="block text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
             Address
           </label>
@@ -147,7 +147,7 @@ export default function Suppliers() {
             placeholder="Street address..."
           />
         </div>
-        <div className="col-span-2">
+        <div className="col-span-1 sm:col-span-2">
           <label className="block text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
             Notes
           </label>
@@ -229,6 +229,36 @@ export default function Suppliers() {
       ) : (
         <DataTable
           data={suppliers}
+          mobileCard={(r) => (
+            <div className="bg-surface rounded-xl border border-border shadow-sm p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-brand-light flex items-center justify-center shrink-0">
+                    <Truck className="w-4 h-4 text-brand" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-display font-semibold text-sm text-foreground truncate">{r.name}</p>
+                    {r.contactPerson && <p className="text-xs text-muted-foreground">{r.contactPerson}</p>}
+                  </div>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${termsColor[r.paymentTerms] || "bg-secondary text-foreground"}`}>{r.paymentTerms}</span>
+              </div>
+              <div className="mt-3 pt-2 border-t border-border/60 flex items-center justify-between">
+                <div className="space-y-0.5">
+                  {r.phone && <div className="flex items-center gap-1 text-xs text-foreground"><Phone className="w-3 h-3 text-muted-foreground" /> {r.phone}</div>}
+                  {r.city && <div className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="w-3 h-3" /> {r.city}{r.state ? `, ${r.state}` : ""}</div>}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handleEdit(r)} className="w-8 h-8 flex items-center justify-center rounded-lg text-brand hover:bg-brand-light transition-colors">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => { setSelected(r); setIsDeleteOpen(true); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           columns={[
             {
               key: "name",
@@ -312,8 +342,8 @@ export default function Suppliers() {
 
       {/* Create Modal */}
       {mounted && isCreateOpen && createPortal(
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-          <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+          <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-display font-bold text-lg text-foreground">Add Supplier</h2>
               <button onClick={() => setIsCreateOpen(false)} className="text-muted-foreground hover:text-foreground">
@@ -333,8 +363,8 @@ export default function Suppliers() {
 
       {/* Edit Modal */}
       {mounted && isEditOpen && selected && createPortal(
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-          <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+          <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-display font-bold text-lg text-foreground">Edit Supplier</h2>
               <button onClick={() => setIsEditOpen(false)} className="text-muted-foreground hover:text-foreground">

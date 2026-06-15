@@ -257,6 +257,46 @@ export default function Sales() {
       ) : (
         <DataTable
           data={invoices}
+          mobileCard={(r) => {
+            const balance = r.total - (r.paidAmount || 0);
+            return (
+              <div className="bg-surface rounded-xl border border-border shadow-sm p-4">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-xs font-display font-semibold text-muted-foreground">{r.invoiceNumber}</span>
+                    </div>
+                    <p className="font-display font-semibold text-sm text-foreground truncate">{r.customerName}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{new Date(r.createdAt).toLocaleDateString("en-IN")} · {r.paymentType}</p>
+                  </div>
+                  <StatusBadge status={r.status} variant="payment" />
+                </div>
+                <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/60">
+                  <div className="flex gap-4 text-xs">
+                    <div>
+                      <p className="text-muted-foreground">Total</p>
+                      <p className="font-display font-bold text-foreground">₹{(r.total || 0).toLocaleString("en-IN")}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Balance</p>
+                      <p className={`font-display font-bold ${balance > 0 ? "text-brand" : "text-success"}`}>₹{balance.toLocaleString("en-IN")}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => handleView(r)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors">
+                      <Eye className="w-3.5 h-3.5" /> View
+                    </button>
+                    {(r.status === "Pending" || r.status === "Credit") && (
+                      <button onClick={() => handleMarkPaid(r)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-success hover:bg-success/10 transition-colors">
+                        <CheckCircle className="w-3.5 h-3.5" /> Paid
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          }}
           columns={[
             {
               key: "invoiceNumber",
@@ -333,8 +373,8 @@ export default function Sales() {
 
       {/* Create Invoice Modal */}
       {mounted && isCreateOpen && createPortal(
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-          <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+          <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-display font-bold text-lg text-foreground">Create Invoice</h2>
               <button onClick={() => setIsCreateOpen(false)} className="text-muted-foreground hover:text-foreground">
@@ -343,7 +383,7 @@ export default function Sales() {
             </div>
 
             <form onSubmit={handleSubmit(onCreateSubmit)} className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-display font-medium text-foreground">Customer <span className="text-destructive">*</span></label>
                   <Popover open={isCustomerComboboxOpen} onOpenChange={setIsCustomerComboboxOpen}>
@@ -457,8 +497,9 @@ export default function Sales() {
 
                 <div className="space-y-3 p-4 bg-secondary rounded-lg">
                   {fields.map((field, idx) => (
-                    <div key={field.id} className="flex gap-3 items-end">
+                    <div key={field.id} className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-end p-2 sm:p-0 rounded-lg sm:rounded-none bg-white sm:bg-transparent border sm:border-0 border-border/50">
                       <div className="flex-1">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Product</label>
                         <select
                           {...register(`items.${idx}.productId` as const)}
                           onChange={(e) => {
@@ -476,26 +517,30 @@ export default function Sales() {
                           ))}
                         </select>
                       </div>
-                      <div className="w-20">
-                        <input
-                          type="number"
-                          min="1"
-                          {...register(`items.${idx}.quantity` as const, { valueAsNumber: true })}
-                          className="w-full h-9 px-2 rounded-lg border border-border bg-surface text-sm outline-none focus:ring-2 focus:ring-brand/50"
-                          placeholder="Qty"
-                        />
+                      <div className="flex gap-2 items-end">
+                        <div className="flex-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Qty</label>
+                          <input
+                            type="number"
+                            min="1"
+                            {...register(`items.${idx}.quantity` as const, { valueAsNumber: true })}
+                            className="w-full sm:w-20 h-9 px-2 rounded-lg border border-border bg-surface text-sm outline-none focus:ring-2 focus:ring-brand/50"
+                            placeholder="Qty"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Unit Price</label>
+                          <input
+                            type="number"
+                            {...register(`items.${idx}.unitPrice` as const, { valueAsNumber: true })}
+                            className="w-full sm:w-28 h-9 px-2 rounded-lg border border-border bg-surface text-sm outline-none focus:ring-2 focus:ring-brand/50"
+                            placeholder="Price"
+                          />
+                        </div>
+                        <button type="button" onClick={() => remove(idx)} className="h-9 px-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors shrink-0">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                      <div className="w-28">
-                        <input
-                          type="number"
-                          {...register(`items.${idx}.unitPrice` as const, { valueAsNumber: true })}
-                          className="w-full h-9 px-2 rounded-lg border border-border bg-surface text-sm outline-none focus:ring-2 focus:ring-brand/50"
-                          placeholder="Price"
-                        />
-                      </div>
-                      <button type="button" onClick={() => remove(idx)} className="h-9 px-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
                   ))}
                 </div>
@@ -542,8 +587,8 @@ export default function Sales() {
 
       {/* View Invoice Modal */}
       {mounted && isViewOpen && selectedInvoice && createPortal(
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-          <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+          <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="font-display font-bold text-lg text-foreground">Invoice Details</h2>
@@ -572,19 +617,36 @@ export default function Sales() {
               </div>
             </div>
 
-            <div className="overflow-x-auto mb-4">
+            {/* Mobile items view */}
+            <div className="sm:hidden space-y-2.5 mb-4">
+              {selectedInvoice.items.map((item, i) => (
+                <div key={i} className="p-3.5 rounded-xl bg-secondary/50 border border-border/80">
+                  <div className="flex justify-between items-start gap-2">
+                    <p className="font-display font-semibold text-sm text-foreground">{item.productName}</p>
+                    <p className="font-display font-bold text-sm text-brand">₹{(item.lineTotal || 0).toLocaleString("en-IN")}</p>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground mt-2 pt-2 border-t border-border/45">
+                    <span>Quantity: <strong className="text-foreground">{item.quantity}</strong> bags</span>
+                    <span>Price: <strong className="text-foreground">₹{(item.unitPrice || 0).toLocaleString("en-IN")}</strong>/bag</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden sm:block overflow-x-auto mb-4 bg-surface rounded-xl border border-border/60">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="px-4 py-2 text-left text-xs font-display font-semibold text-muted-foreground">Product</th>
-                    <th className="px-4 py-2 text-right text-xs font-display font-semibold text-muted-foreground">Qty</th>
-                    <th className="px-4 py-2 text-right text-xs font-display font-semibold text-muted-foreground">Unit Price</th>
-                    <th className="px-4 py-2 text-right text-xs font-display font-semibold text-muted-foreground">Total</th>
+                  <tr className="border-b border-border bg-background">
+                    <th className="px-4 py-2.5 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Product</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Qty</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Unit Price</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {selectedInvoice.items.map((item, i) => (
-                    <tr key={i} className="border-b border-border last:border-0">
+                    <tr key={i} className="border-b border-border last:border-0 hover:bg-background/40 transition-colors">
                       <td className="px-4 py-3 font-medium text-foreground">{item.productName}</td>
                       <td className="px-4 py-3 text-right text-foreground">{item.quantity}</td>
                       <td className="px-4 py-3 text-right text-foreground">₹{(item.unitPrice || 0).toLocaleString("en-IN")}</td>
@@ -610,7 +672,7 @@ export default function Sales() {
             )}
 
             <div className="flex justify-end mb-6">
-              <div className="text-right w-64">
+              <div className="text-right w-full sm:w-64">
                 <div className="flex justify-between text-sm text-muted-foreground"><span>Subtotal:</span><span>₹{(selectedInvoice.subtotal || 0).toLocaleString("en-IN")}</span></div>
                 <div className="flex justify-between text-sm text-muted-foreground mt-1"><span>GST ({selectedInvoice.gstRate}%):</span><span>₹{(selectedInvoice.gstAmount || 0).toLocaleString("en-IN")}</span></div>
                 <div className="flex justify-between border-t border-border mt-2 pt-2">
@@ -673,12 +735,12 @@ export default function Sales() {
               </div>
             )}
 
-            <div className="flex gap-3 pt-4 border-t border-border">
-              <button onClick={() => { setIsViewOpen(false); setShowAddPayment(false); }} className="flex-1 h-10 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Close</button>
+            <div className="flex flex-wrap gap-2 pt-4 border-t border-border">
+              <button onClick={() => { setIsViewOpen(false); setShowAddPayment(false); }} className="flex-1 min-w-[80px] h-10 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Close</button>
               {/* Print Invoice */}
               <button
                 onClick={() => window.open(`/sales/${selectedInvoice._id}/print`, "_blank")}
-                className="h-10 px-4 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors flex items-center gap-1.5 text-muted-foreground"
+                className="h-10 px-3 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors flex items-center gap-1.5 text-muted-foreground"
               >
                 <Printer className="w-4 h-4" /> Print
               </button>
@@ -686,7 +748,7 @@ export default function Sales() {
               {(selectedInvoice.status === "Paid" || selectedInvoice.status === "Credit" || selectedInvoice.status === "Overdue") && (
                 <button
                   onClick={() => handleOpenReturn(selectedInvoice)}
-                  className="h-10 px-4 rounded-lg border border-warning/40 text-warning text-sm font-display font-semibold hover:bg-warning/10 transition-colors flex items-center gap-1.5"
+                  className="h-10 px-3 rounded-lg border border-warning/40 text-warning text-sm font-display font-semibold hover:bg-warning/10 transition-colors flex items-center gap-1.5"
                 >
                   <RotateCcw className="w-4 h-4" /> Return
                 </button>
@@ -697,7 +759,7 @@ export default function Sales() {
                     setPaymentAmount(selectedInvoice.total - (selectedInvoice.paidAmount || 0));
                     setShowAddPayment(true);
                   }}
-                  className="flex-1 h-10 rounded-lg bg-success text-white text-sm font-display font-semibold hover:bg-success/90 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 min-w-[120px] h-10 rounded-lg bg-success text-white text-sm font-display font-semibold hover:bg-success/90 transition-colors flex items-center justify-center gap-2"
                 >
                   <Plus className="w-4 h-4" /> Add Payment
                 </button>
@@ -709,8 +771,8 @@ export default function Sales() {
       )}
       {/* Return / Credit Note Modal */}
       {mounted && isReturnOpen && selectedInvoice && createPortal(
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
-          <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[80] p-0 sm:p-4">
+          <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h2 className="font-display font-bold text-lg text-foreground">Return / Credit Note</h2>

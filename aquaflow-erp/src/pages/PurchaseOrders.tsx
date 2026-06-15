@@ -134,6 +134,31 @@ export default function PurchaseOrders() {
       ) : (
         <DataTable
           data={pos}
+          mobileCard={(r) => (
+            <div className="bg-surface rounded-xl border border-border shadow-sm p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-display font-semibold text-sm text-foreground font-mono">{r.poNumber}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{r.supplierName}</p>
+                  <p className="text-xs text-muted-foreground">{r.warehouse?.name || "—"} · {new Date(r.createdAt).toLocaleDateString("en-IN")}</p>
+                </div>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-medium shrink-0 ${PO_STATUS_COLORS[r.status] || "bg-secondary text-foreground"}`}>{r.status}</span>
+              </div>
+              <div className="mt-3 pt-2 border-t border-border/60 flex items-center justify-between">
+                <p className="font-display font-bold text-sm text-foreground">₹{r.totalAmount.toLocaleString("en-IN")}</p>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => { setSelected(r); setIsDetailOpen(true); }} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors">
+                    <Eye className="w-3.5 h-3.5" /> View
+                  </button>
+                  {(r.status === "Ordered" || r.status === "Draft") && (
+                    <button onClick={() => { setSelected(r); setIsReceiveConfirmOpen(true); }} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-success hover:bg-success/10 transition-colors">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Receive
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           columns={[
             {
               key: "poNumber",
@@ -231,8 +256,8 @@ export default function PurchaseOrders() {
 
       {/* Create PO Modal */}
       {mounted && isCreateOpen && createPortal(
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-          <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+          <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="font-display font-bold text-lg text-foreground">New Purchase Order</h2>
@@ -244,8 +269,8 @@ export default function PurchaseOrders() {
             </div>
 
             <form onSubmit={handleSubmit(onCreateSubmit)} className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="col-span-1 sm:col-span-2">
                   <label className="block text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                     Supplier *
                   </label>
@@ -298,8 +323,9 @@ export default function PurchaseOrders() {
                 </div>
                 <div className="space-y-2">
                   {fields.map((field, i) => (
-                    <div key={field.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center p-3 rounded-xl border border-border bg-secondary/30">
-                      <div>
+                    <div key={field.id} className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-xl border border-border bg-secondary/30">
+                      <div className="flex-1">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Product</label>
                         <select
                           {...register(`items.${i}.productId`, { required: true })}
                           className="w-full h-9 px-2 rounded-md border border-border bg-surface text-sm text-foreground outline-none focus:ring-1 focus:ring-brand/50"
@@ -310,33 +336,37 @@ export default function PurchaseOrders() {
                           ))}
                         </select>
                       </div>
-                      <div className="w-20">
-                        <input
-                          type="number"
-                          min={1}
-                          {...register(`items.${i}.quantity`, { valueAsNumber: true, min: 1 })}
-                          placeholder="Qty"
-                          className="w-full h-9 px-2 rounded-md border border-border bg-surface text-sm text-foreground outline-none focus:ring-1 focus:ring-brand/50 text-center"
-                        />
-                      </div>
-                      <div className="w-28">
-                        <div className="relative">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">₹</span>
+                      <div className="flex gap-2 items-end sm:items-center">
+                        <div className="flex-1 sm:w-20 sm:flex-none">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Qty</label>
                           <input
                             type="number"
-                            min={0}
-                            step={0.01}
-                            {...register(`items.${i}.unitCost`, { valueAsNumber: true })}
-                            placeholder="Cost"
-                            className="w-full h-9 pl-5 pr-2 rounded-md border border-border bg-surface text-sm text-foreground outline-none focus:ring-1 focus:ring-brand/50"
+                            min={1}
+                            {...register(`items.${i}.quantity`, { valueAsNumber: true, min: 1 })}
+                            placeholder="Qty"
+                            className="w-full h-9 px-2 rounded-md border border-border bg-surface text-sm text-foreground outline-none focus:ring-1 focus:ring-brand/50 text-center"
                           />
                         </div>
+                        <div className="flex-1 sm:w-28 sm:flex-none">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Unit Cost</label>
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">₹</span>
+                            <input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              {...register(`items.${i}.unitCost`, { valueAsNumber: true })}
+                              placeholder="Cost"
+                              className="w-full h-9 pl-5 pr-2 rounded-md border border-border bg-surface text-sm text-foreground outline-none focus:ring-1 focus:ring-brand/50"
+                            />
+                          </div>
+                        </div>
+                        {fields.length > 1 && (
+                          <button type="button" onClick={() => remove(i)} className="text-muted-foreground hover:text-destructive transition-colors shrink-0 h-9 flex items-center">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
-                      {fields.length > 1 && (
-                        <button type="button" onClick={() => remove(i)} className="text-muted-foreground hover:text-destructive transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -386,8 +416,8 @@ export default function PurchaseOrders() {
 
       {/* Detail Modal */}
       {mounted && isDetailOpen && selected && createPortal(
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-          <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-xl max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+          <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
                 <div className="flex items-center gap-2">

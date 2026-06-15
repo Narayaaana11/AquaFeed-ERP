@@ -83,15 +83,15 @@ export default function Warehouses() {
     useEffect(() => setMounted(true), []);
     if (!mounted) return null;
     return createPortal(
-      <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-        <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+      <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+        <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display font-bold text-lg text-foreground">{title}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="col-span-1 sm:col-span-2">
               <FormInput label="Warehouse Name *" placeholder="Main Warehouse" {...reg("name", { required: "Name is required" })} error={errs.name} />
             </div>
             <FormInput label="Code" placeholder="WH-MAIN" {...reg("code")} />
@@ -100,10 +100,10 @@ export default function Warehouses() {
             <FormNumber label="Capacity (bags)" placeholder="500" {...reg("capacity")} />
             <FormInput label="City" placeholder="Vijayawada" {...reg("city")} />
             <FormInput label="State" placeholder="Andhra Pradesh" {...reg("state")} />
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <FormInput label="Address" placeholder="Street, Area" {...reg("address")} />
             </div>
-            <div className="col-span-2 flex items-center gap-2">
+            <div className="col-span-1 sm:col-span-2 flex items-center gap-2">
               <input type="checkbox" id="isDefault" {...reg("isDefault")} className="w-4 h-4 accent-brand rounded" />
               <label htmlFor="isDefault" className="text-sm font-medium text-foreground">Set as default warehouse</label>
             </div>
@@ -215,8 +215,8 @@ const WarehouseStocksModal = ({ warehouse, onClose }: { warehouse: Warehouse; on
   const utilization = capacity > 0 ? Math.min(100, Math.round((totalStock / capacity) * 100)) : 0;
 
   return createPortal(
-    <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-      <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+    <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+      <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="font-display font-bold text-lg text-foreground">Stocks in {warehouse.name}</h2>

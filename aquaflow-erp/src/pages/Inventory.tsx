@@ -151,6 +151,49 @@ export default function Inventory() {
       ) : tab === "stock" ? (
         <DataTable
           data={inventory}
+          mobileCard={(r: any) => {
+            const statusMap: Record<string, string> = {
+              in_stock: "bg-success/10 text-success",
+              low_stock: "bg-warning/10 text-warning",
+              critical: "bg-destructive/10 text-destructive",
+              out_of_stock: "bg-muted text-muted-foreground",
+            };
+            const labelMap: Record<string, string> = { in_stock: "In Stock", low_stock: "Low Stock", critical: "Critical", out_of_stock: "Out of Stock" };
+            return (
+              <div className="bg-surface rounded-xl border border-border shadow-sm p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-brand-light flex items-center justify-center shrink-0">
+                      <Package2 className="w-4 h-4 text-brand" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-display font-semibold text-sm text-foreground truncate">{r.name}</p>
+                      <p className="text-xs text-muted-foreground">{r.brand} · {r.category}</p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${statusMap[r.stockStatus] || "bg-secondary text-foreground"}`}>
+                    {labelMap[r.stockStatus] || r.stockStatus}
+                  </span>
+                </div>
+                <div className="mt-3 pt-2 border-t border-border/60 flex items-center justify-between text-xs">
+                  <div className="flex gap-4">
+                    <div>
+                      <p className="text-muted-foreground">Stock</p>
+                      <p className="font-display font-bold text-foreground">{r.stock} bags</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Reorder At</p>
+                      <p className="font-semibold text-foreground">{r.lowStockThreshold} bags</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Value</p>
+                      <p className="font-semibold text-foreground">₹{(r.stock * r.price).toLocaleString("en-IN")}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }}
           columns={[
             {
               key: "name",
@@ -212,6 +255,28 @@ export default function Inventory() {
       ) : (
         <DataTable
           data={movements}
+          mobileCard={(r: any) => {
+            const isIn = ["add", "transfer_in", "return"].includes(r.type);
+            return (
+              <div className="bg-surface rounded-xl border border-border shadow-sm p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-display font-semibold text-sm text-foreground truncate">{r.product?.name || "—"}</p>
+                    <p className="text-xs text-muted-foreground">{r.product?.brand}</p>
+                  </div>
+                  <div className={`flex items-center gap-1 font-display font-bold text-sm ${isIn ? "text-success" : "text-destructive"}`}>
+                    {isIn ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                    {isIn ? "+" : "−"}{r.quantity}
+                  </div>
+                </div>
+                <div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{new Date(r.createdAt).toLocaleDateString("en-IN")} · {r.type.replace("_", " ")}</span>
+                  <span>{r.previousStock} → {r.newStock} bags</span>
+                </div>
+                {(r.reason || r.reference) && <p className="text-xs text-muted-foreground mt-1">{r.reason || r.reference}</p>}
+              </div>
+            );
+          }}
           columns={[
             {
               key: "createdAt",
@@ -271,8 +336,8 @@ export default function Inventory() {
 
       {/* Adjust Stock Modal */}
       {mounted && isAdjustOpen && createPortal(
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-          <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+          <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display font-bold text-lg text-foreground">Adjust Stock</h2>
               <button onClick={() => setIsAdjustOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
@@ -365,7 +430,7 @@ export default function Inventory() {
               </div>
 
               {adjustmentType === "transfer" ? (
-                <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-brand/5 border border-brand/20">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg bg-brand/5 border border-brand/20">
                   <FormSelect
                     label="From Warehouse *"
                     options={warehouses.map((w) => ({ value: w._id, label: w.name }))}

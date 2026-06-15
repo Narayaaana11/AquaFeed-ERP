@@ -106,22 +106,22 @@ export default function Expenses() {
     useEffect(() => setMounted(true), []);
     if (!mounted) return null;
     return createPortal(
-      <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-        <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
+      <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+        <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display font-bold text-lg text-foreground">{title}</h2>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
           </div>
           <form onSubmit={submit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormSelect label="Category *" options={EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))} name="category" control={control} required error={errs.category} />
               <FormNumber label="Amount (₹) *" prefix="₹" placeholder="5000" {...reg("amount", { required: "Required", valueAsNumber: true, min: { value: 1, message: "Must be > 0" } })} error={errs.amount} />
               <FormInput label="Date *" type="date" {...reg("date", { required: "Required" })} error={errs.date} />
               <FormSelect label="Payment Method" options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))} name="paymentMethod" control={control} />
-              <div className="col-span-2">
+              <div className="col-span-1 sm:col-span-2">
                 <FormInput label="Description" placeholder="Brief description" {...reg("description")} />
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1 sm:col-span-2">
                 <FormInput label="Reference (optional)" placeholder="Bill no., receipt no…" {...reg("reference")} />
               </div>
             </div>
@@ -191,6 +191,34 @@ export default function Expenses() {
       ) : (
         <DataTable
           data={expenses}
+          mobileCard={(r) => (
+            <div className="bg-surface rounded-xl border border-border shadow-sm p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-display font-semibold text-sm text-foreground">{r.category}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{r.description || "—"}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(r.date).toLocaleDateString("en-IN")} · {r.paymentMethod}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-display font-bold text-sm text-foreground">₹{(r.amount || 0).toLocaleString("en-IN")}</p>
+                  <StatusBadge status={r.status === "Pending Approval" ? "Pending" : r.status} variant="payment" />
+                </div>
+              </div>
+              <div className="mt-3 pt-2 border-t border-border/60 flex items-center justify-end gap-1">
+                {r.status === "Pending Approval" && (
+                  <button onClick={() => approveExpense.mutate(r._id)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-success hover:bg-success/10 transition-colors">
+                    <CheckCircle className="w-3.5 h-3.5" /> Approve
+                  </button>
+                )}
+                <button onClick={() => handleEdit(r)} className="w-8 h-8 flex items-center justify-center rounded-lg text-brand hover:bg-brand-light transition-colors">
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => { setSelectedExpense(r); setIsDeleteOpen(true); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
           columns={[
             {
               key: "category",

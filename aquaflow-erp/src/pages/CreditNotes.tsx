@@ -71,6 +71,30 @@ export default function CreditNotes() {
       ) : (
         <DataTable
           data={filtered}
+          mobileCard={(r) => (
+            <div className="bg-surface rounded-xl border border-border shadow-sm p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <RotateCcw className="w-3.5 h-3.5 text-warning shrink-0" />
+                    <span className="font-display font-bold text-foreground font-mono text-xs">{r.creditNoteNumber}</span>
+                  </div>
+                  <p className="font-display font-semibold text-sm text-foreground">{r.customerName}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Invoice: {r.originalInvoiceNumber} · {new Date(r.createdAt).toLocaleDateString("en-IN")}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-display font-bold text-sm text-warning">₹{r.totalAmount.toLocaleString("en-IN")}</p>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[r.status] || "bg-secondary text-foreground"}`}>{r.status}</span>
+                </div>
+              </div>
+              <div className="mt-3 pt-2 border-t border-border/60 flex items-center justify-between">
+                <p className="text-xs text-muted-foreground truncate">{r.reason || "Product return"}</p>
+                <button onClick={() => { setSelected(r); setIsDetailOpen(true); }} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors shrink-0">
+                  <Eye className="w-3.5 h-3.5" /> View
+                </button>
+              </div>
+            </div>
+          )}
           columns={[
             {
               key: "creditNoteNumber",
@@ -151,8 +175,8 @@ export default function CreditNotes() {
 
       {/* Detail Modal */}
       {mounted && isDetailOpen && selected && createPortal(
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-          <div className="bg-surface rounded-2xl border border-border shadow-panel w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+          <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
                 <div className="flex items-center gap-2">
@@ -170,7 +194,7 @@ export default function CreditNotes() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-secondary/30 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-secondary/30 mb-4">
               <div>
                 <p className="text-xs text-muted-foreground">Customer</p>
                 <p className="font-medium text-sm text-foreground">{selected.customerName}</p>
@@ -181,7 +205,7 @@ export default function CreditNotes() {
                   {new Date(selected.createdAt).toLocaleDateString("en-IN")}
                 </p>
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1 sm:col-span-2">
                 <p className="text-xs text-muted-foreground">Reason</p>
                 <p className="font-medium text-sm text-foreground">{selected.reason || "Product return"}</p>
               </div>
