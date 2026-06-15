@@ -257,27 +257,29 @@ const WarehouseStocksModal = ({ warehouse, onClose }: { warehouse: Warehouse; on
           </div>
         ) : (
           <div className="border border-border rounded-xl overflow-hidden shadow-card">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-secondary/50 text-xs font-display font-semibold text-muted-foreground uppercase">
-                  <th className="px-4 py-2 text-left">Product</th>
-                  <th className="px-4 py-2 text-right">Quantity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stocks.map((item: any) => (
-                  <tr key={item._id} className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-foreground">{item.product?.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{item.product?.brand}</p>
-                    </td>
-                    <td className="px-4 py-3 text-right font-display font-semibold text-foreground">
-                      {item.quantity} <span className="text-xs font-normal text-muted-foreground">bags</span>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-secondary/50 text-xs font-display font-semibold text-muted-foreground uppercase">
+                    <th className="px-4 py-2 text-left">Product</th>
+                    <th className="px-4 py-2 text-right">Quantity</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {stocks.map((item: any) => (
+                    <tr key={item._id} className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-foreground">{item.product?.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{item.product?.brand}</p>
+                      </td>
+                      <td className="px-4 py-3 text-right font-display font-semibold text-foreground">
+                        {item.quantity} <span className="text-xs font-normal text-muted-foreground">bags</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

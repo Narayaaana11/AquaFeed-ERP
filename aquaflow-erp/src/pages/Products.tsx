@@ -275,7 +275,7 @@ export default function Products() {
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <div className="flex items-center gap-2 h-10 px-3 rounded-xl border border-border bg-surface flex-1">
+        <div className="flex items-center gap-2 h-10 px-3 rounded-xl border border-border bg-surface flex-1 max-w-md">
           <Search className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
           <input
             value={searchQuery}
@@ -417,7 +417,8 @@ export default function Products() {
 
           {/* Desktop Table */}
           <div className="hidden sm:block bg-surface rounded-2xl border border-border shadow-card overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-background">
                   <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Product</th>
@@ -490,6 +491,7 @@ export default function Products() {
               </tbody>
             </table>
           </div>
+        </div>
 
           {/* Pagination */}
           {totalPages > 1 && (

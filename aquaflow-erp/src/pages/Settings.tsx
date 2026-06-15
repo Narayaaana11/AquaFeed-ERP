@@ -452,82 +452,84 @@ export default function Settings() {
                 No team members found.
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-background">
-                    {["Employee", "Email", "Role", "Status", "Actions"].map(
-                      (h) => (
-                        <th
-                          key={h}
-                          className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide"
-                        >
-                          {h}
-                        </th>
-                      ),
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {employees.map((e) => (
-                    <tr
-                      key={e._id}
-                      className="border-b border-border last:border-0 hover:bg-background transition-colors"
-                    >
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-brand-light flex items-center justify-center text-brand font-bold text-xs shrink-0">
-                            {e.name.charAt(0)}
-                          </div>
-                          <span className="font-medium text-foreground">
-                            {e.name}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5 text-muted-foreground text-xs">
-                        {e.email}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium ${roleColor[e.role] || "bg-secondary"}`}
-                        >
-                          {e.role}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium ${e.isActive
-                              ? "bg-success/10 text-success"
-                              : "bg-muted text-muted-foreground"
-                            }`}
-                        >
-                          {e.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEditEmployee(e)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors"
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-background">
+                      {["Employee", "Email", "Role", "Status", "Actions"].map(
+                        (h) => (
+                          <th
+                            key={h}
+                            className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide"
                           >
-                            <Pencil className="w-3.5 h-3.5" /> Edit
-                          </button>
-                          {e.isActive && (
-                            <button
-                              onClick={() => {
-                                setSelectedEmployee(e);
-                                setIsDeleteOpen(true);
-                              }}
-                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Deactivate
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                            {h}
+                          </th>
+                        ),
+                      )}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {employees.map((e) => (
+                      <tr
+                        key={e._id}
+                        className="border-b border-border last:border-0 hover:bg-background transition-colors"
+                      >
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-brand-light flex items-center justify-center text-brand font-bold text-xs shrink-0">
+                              {e.name.charAt(0)}
+                            </div>
+                            <span className="font-medium text-foreground">
+                              {e.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-muted-foreground text-xs">
+                          {e.email}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-xs font-medium ${roleColor[e.role] || "bg-secondary"}`}
+                          >
+                            {e.role}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-xs font-medium ${e.isActive
+                                ? "bg-success/10 text-success"
+                                : "bg-muted text-muted-foreground"
+                              }`}
+                          >
+                            {e.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditEmployee(e)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors"
+                            >
+                              <Pencil className="w-3.5 h-3.5" /> Edit
+                            </button>
+                            {e.isActive && (
+                              <button
+                                onClick={() => {
+                                  setSelectedEmployee(e);
+                                  setIsDeleteOpen(true);
+                                }}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Deactivate
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
