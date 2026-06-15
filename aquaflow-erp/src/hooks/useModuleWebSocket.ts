@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useWebSocketContext } from './useWebSocketContext';
 
+const devLog = (...args: any[]) => {
+    if (import.meta.env.DEV) {
+        console.log(...args);
+    }
+};
+
 /**
  * useProducts - WebSocket hook for product updates
  */
@@ -13,19 +19,19 @@ export function useProducts(onProductCreated?: (product: any) => void, onProduct
             subscribe('products');
 
             const handleProductCreated = (product: any) => {
-                console.log('📦 Product created:', product);
+                devLog('📦 Product created:', product);
                 setProductUpdates({ type: 'created', product });
                 onProductCreated?.(product);
             };
 
             const handleProductUpdated = (product: any) => {
-                console.log('📦 Product updated:', product);
+                devLog('📦 Product updated:', product);
                 setProductUpdates({ type: 'updated', product });
                 onProductUpdated?.(product);
             };
 
             const handleProductDeleted = (data: any) => {
-                console.log('📦 Product deleted:', data.productId);
+                devLog('📦 Product deleted:', data.productId);
                 setProductUpdates({ type: 'deleted', productId: data.productId });
                 onProductDeleted?.(data.productId);
             };
@@ -57,19 +63,19 @@ export function useSales(onInvoiceCreated?: (invoice: any) => void, onInvoiceUpd
             subscribe('sales');
 
             const handleInvoiceCreated = (invoice: any) => {
-                console.log('💰 Invoice created:', invoice);
+                devLog('💰 Invoice created:', invoice);
                 setSalesUpdates({ type: 'created', invoice });
                 onInvoiceCreated?.(invoice);
             };
 
             const handleInvoiceUpdated = (invoice: any) => {
-                console.log('💰 Invoice updated:', invoice);
+                devLog('💰 Invoice updated:', invoice);
                 setSalesUpdates({ type: 'updated', invoice });
                 onInvoiceUpdated?.(invoice);
             };
 
             const handleInvoicePaid = (invoice: any) => {
-                console.log('✅ Invoice paid:', invoice);
+                devLog('✅ Invoice paid:', invoice);
                 setSalesUpdates({ type: 'paid', invoice });
                 onInvoicePaid?.(invoice);
             };
@@ -101,13 +107,13 @@ export function useInventory(onStockAdjustment?: (adjustment: any) => void, onLo
             subscribe('inventory');
 
             const handleStockAdjustment = (adjustment: any) => {
-                console.log('📊 Stock adjustment:', adjustment);
+                devLog('📊 Stock adjustment:', adjustment);
                 setInventoryUpdates({ type: 'adjustment', adjustment });
                 onStockAdjustment?.(adjustment);
             };
 
             const handleLowStockAlert = (data: any) => {
-                console.log('⚠️ Low stock alert:', data);
+                devLog('⚠️ Low stock alert:', data);
                 setInventoryUpdates({ type: 'low_stock', products: data.products });
                 onLowStockAlert?.(data.products);
             };
@@ -137,19 +143,19 @@ export function useExpenses(onExpenseCreated?: (expense: any) => void, onExpense
             subscribe('expenses');
 
             const handleExpenseCreated = (expense: any) => {
-                console.log('💸 Expense created:', expense);
+                devLog('💸 Expense created:', expense);
                 setExpenseUpdates({ type: 'created', expense });
                 onExpenseCreated?.(expense);
             };
 
             const handleExpenseUpdated = (expense: any) => {
-                console.log('💸 Expense updated:', expense);
+                devLog('💸 Expense updated:', expense);
                 setExpenseUpdates({ type: 'updated', expense });
                 onExpenseUpdated?.(expense);
             };
 
             const handleExpenseDeleted = (data: any) => {
-                console.log('💸 Expense deleted:', data.expenseId);
+                devLog('💸 Expense deleted:', data.expenseId);
                 setExpenseUpdates({ type: 'deleted', expenseId: data.expenseId });
                 onExpenseDeleted?.(data.expenseId);
             };
@@ -181,19 +187,19 @@ export function useCustomers(onCustomerCreated?: (customer: any) => void, onCust
             subscribe('customers');
 
             const handleCustomerCreated = (customer: any) => {
-                console.log('👥 Customer created:', customer);
+                devLog('👥 Customer created:', customer);
                 setCustomerUpdates({ type: 'created', customer });
                 onCustomerCreated?.(customer);
             };
 
             const handleCustomerUpdated = (customer: any) => {
-                console.log('👥 Customer updated:', customer);
+                devLog('👥 Customer updated:', customer);
                 setCustomerUpdates({ type: 'updated', customer });
                 onCustomerUpdated?.(customer);
             };
 
             const handleCustomerDeleted = (data: any) => {
-                console.log('👥 Customer deleted:', data.customerId);
+                devLog('👥 Customer deleted:', data.customerId);
                 setCustomerUpdates({ type: 'deleted', customerId: data.customerId });
                 onCustomerDeleted?.(data.customerId);
             };
@@ -225,13 +231,13 @@ export function usePurchaseOrders(onPOCreated?: (po: any) => void, onPOReceived?
             subscribe('company');
 
             const handlePOCreated = (po: any) => {
-                console.log('🛒 Purchase order created:', po);
+                devLog('🛒 Purchase order created:', po);
                 setPoUpdates({ type: 'created', po });
                 onPOCreated?.(po);
             };
 
             const handlePOReceived = (po: any) => {
-                console.log('✅ Purchase order received:', po);
+                devLog('✅ Purchase order received:', po);
                 setPoUpdates({ type: 'received', po });
                 onPOReceived?.(po);
             };

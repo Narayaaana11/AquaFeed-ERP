@@ -1,6 +1,12 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
+const devLog = (...args: any[]) => {
+    if (import.meta.env.DEV) {
+        console.log(...args);
+    }
+};
+
 interface UseWebSocketOptions {
     url?: string;
     autoConnect?: boolean;
@@ -50,13 +56,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             });
 
             socketRef.current.on('connect', () => {
-                console.log('✅ WebSocket connected');
+                devLog('✅ WebSocket connected');
                 setIsConnected(true);
                 setError(null);
             });
 
             socketRef.current.on('disconnect', () => {
-                console.log('❌ WebSocket disconnected');
+                devLog('❌ WebSocket disconnected');
                 setIsConnected(false);
             });
 
@@ -85,7 +91,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     const subscribe = useCallback((channel: string) => {
         if (socketRef.current?.connected) {
             socketRef.current.emit(`subscribe_${channel}`);
-            console.log(`📡 Subscribed to ${channel}`);
+            devLog(`📡 Subscribed to ${channel}`);
         } else {
             console.warn(`⚠️  Cannot subscribe to ${channel} - WebSocket not connected`);
         }
@@ -95,7 +101,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     const unsubscribe = useCallback((channel: string) => {
         if (socketRef.current?.connected) {
             socketRef.current.emit(`unsubscribe_${channel}`);
-            console.log(`📡 Unsubscribed from ${channel}`);
+            devLog(`📡 Unsubscribed from ${channel}`);
         } else {
             console.warn(`⚠️  Cannot unsubscribe from ${channel} - WebSocket not connected`);
         }

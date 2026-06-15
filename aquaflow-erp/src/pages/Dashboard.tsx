@@ -45,13 +45,13 @@ export default function Dashboard() {
 
       // Listen for real-time dashboard updates
       const handleDashboardUpdate = (data: any) => {
-        console.log('📊 Real-time dashboard update:', data);
+        if (import.meta.env.DEV) console.log('📊 Real-time dashboard update:', data);
         if (data && data.kpis) {
           setRealTimeData(data);
           setLastUpdate(new Date());
         } else {
           // Refetch KPI stats on update notifications to get fresh db values
-          console.log('🔄 Refetching dashboard due to update event');
+          if (import.meta.env.DEV) console.log('🔄 Refetching dashboard due to update event');
           refetch();
           setLastUpdate(new Date());
         }
@@ -59,20 +59,20 @@ export default function Dashboard() {
 
       // Listen for low stock alerts
       const handleLowStockAlert = (data: any) => {
-        console.log('⚠️ Low stock alert:', data);
+        if (import.meta.env.DEV) console.log('⚠️ Low stock alert:', data);
         setLowStockAlerts(data.products || []);
       };
 
       // Listen for invoice creation (refresh dashboard)
       const handleInvoiceCreated = (invoice: any) => {
-        console.log('📄 New invoice:', invoice);
+        if (import.meta.env.DEV) console.log('📄 New invoice:', invoice);
         setLastUpdate(new Date());
         refetch();
       };
 
       // Listen for product updates
       const handleProductUpdate = () => {
-        console.log('🔄 Product updated');
+        if (import.meta.env.DEV) console.log('🔄 Product updated');
         refetch();
       };
 
