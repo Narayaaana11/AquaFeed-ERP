@@ -343,21 +343,35 @@ class _tally {
                         logger.logMessage('Not a single company is open in Tally');
                         return reject();
                     }
+                    let companiesToSync = [];
+                    // Check if company is set to a specific open company
+                    if (this.config.company && this.config.company.toLowerCase() !== 'all') {
+                        if (lstCompanies.map(p => p.name).includes(this.config.company)) {
+                            companiesToSync.push(this.config.company);
+                        }
+                        else {
+                            logger.logMessage(`Specified company "${this.config.company}" does not exists / open in Tally`);
+                            return reject();
+                        }
+                    }
                     else {
-                        //activate target company
-                        if (this.config.company) {
-                            //validate if specified company exists
-                            if (lstCompanies.map(p => p.name).includes(this.config.company)) {
-                                await this.setTallyTargetCompany(this.config.company); // make the company active
-                            }
-                            else {
-                                logger.logMessage(`Specified company "${this.config.company}" does not exists / open in Tally`);
-                                return reject();
-                            }
+                        // If empty or set to 'all', sync all open companies
+                        companiesToSync = lstCompanies.map(p => p.name);
+                        logger.logMessage(`Syncing all ${companiesToSync.length} open companies in Tally: ${companiesToSync.join(', ')}`);
+                    }
+
+                    for (const activeCompany of companiesToSync) {
+                        logger.logMessage(`\n🏢 Syncing company: "${activeCompany}"`);
+                        this.config.company = activeCompany;
+                        await this.setTallyTargetCompany(activeCompany);
+
+                        if (database.config.technology === 'mongodb') {
+                            const rawDbSchema = 'tallydb_' + activeCompany.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').trim().replace(/^_|_$/g, '');
+                            const dbSchema = rawDbSchema.slice(0, 38).replace(/_$/, '');
+                            database.switchDatabaseSchema(dbSchema);
+                            logger.logMessage(`📂 Switched database schema to: "${dbSchema}"`);
                         }
-                        else { // default to active company
-                            this.config.company = lstCompanies[0]?.name || '';
-                        }
+
                         //select target period
                         if (this.config.fromdate.toLowerCase() == 'auto' || this.config.todate.toLowerCase() == 'auto') {
                             [this.periodFromDate, this.periodToDate] = await this.fetchTallyCompanyDefaultPeriod();
@@ -373,7 +387,6 @@ class _tally {
                                 await this.setTallyTargetPeriod(this.periodFromDate, this.periodToDate);
                             }
                         }
-                    }
                     let lstTables = [];
                     if (this.importMaster) {
                         if (this.isDefinitionYAML) {
@@ -509,7 +522,7 @@ class _tally {
                         }
                     }
                     if (this.truncateTable) {
-                        if (/^(mssql|mysql|postgres)$/g.test(database.config.technology)) {
+                        if (/^(mssql|mysql|postgres|mongodb)$/g.test(database.config.technology)) {
                             await database.truncateTables(lstTables); //truncate tables
                         }
                     }
@@ -576,6 +589,7 @@ class _tally {
                     }
                     else
                         ;
+                    }
                 }
                 resolve();
             }
@@ -593,14 +607,14 @@ class _tally {
             try {
                 //acquire last AlterID of master & transaction from Tally (for current company)
                 let xmlPayLoad = '<?xml version="1.0" encoding="utf-8"?><ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Data</TYPE><ID>MyReport</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>ASCII (Comma Delimited)</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><REPORT NAME="MyReport"><FORMS>MyForm</FORMS></REPORT><FORM NAME="MyForm"><PARTS>MyPart</PARTS></FORM><PART NAME="MyPart"><LINES>MyLine</LINES><REPEAT>MyLine : MyCollection</REPEAT><SCROLLED>Vertical</SCROLLED></PART><LINE NAME="MyLine"><FIELDS>FldAlterMaster,FldAlterTransaction</FIELDS></LINE><FIELD NAME="FldAlterMaster"><SET>$AltMstId</SET></FIELD><FIELD NAME="FldAlterTransaction"><SET>$AltVchId</SET></FIELD><COLLECTION NAME="MyCollection"><TYPE>Company</TYPE><FILTER>FilterActiveCompany</FILTER></COLLECTION><SYSTEM TYPE="Formulae" NAME="FilterActiveCompany">$$IsEqual:##SVCurrentCompany:$Name</SYSTEM></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>';
-                if (tally.config.company) { // substitute company name if found
+                if (tally.config.company && tally.config.company.toLowerCase() !== 'all') { // substitute company name if found
                     xmlPayLoad = xmlPayLoad.replace('##SVCurrentCompany', `"${utility.String.escapeHTML(tally.config.company)}"`);
                 }
                 let contentLastAlterIdTally = await this.postTallyXML(xmlPayLoad);
                 if (contentLastAlterIdTally == '') { //target company is closed
                     this.lastAlterIdMaster = -1;
                     this.lastAlterIdTransaction - 1;
-                    if (!tally.config.company) {
+                    if (!tally.config.company || tally.config.company.toLowerCase() === 'all') {
                         logger.logMessage('No company open in Tally');
                         return reject('Please select one or more company in Tally to sync data');
                     }

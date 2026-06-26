@@ -191,6 +191,12 @@ class _database {
             }
         });
     }
+    switchDatabaseSchema(newSchema) {
+        this.config.schema = newSchema;
+        if (this.config.technology == 'mongodb' && this.connectionPoolMongodb) {
+            this.dbMongodb = this.connectionPoolMongodb.db(newSchema);
+        }
+    }
     convertCSV(content, lstFieldType, doubleQuote = false) {
         let lstLines = content.split(/\r\n/g);
         for (let r = 0; r < lstLines.length; r++) {

@@ -262,43 +262,76 @@ async function syncTallyData(targetCompanyId = null) {
     startTime: new Date()
   };
 
+  let baseConnection = null;
   try {
-    // 1. Establish connection to Tally SQL Database
-    connection = await getDbConnection();
+    // 1. Establish base connection to Tally staging server
+    baseConnection = await getDbConnection();
+    const dbTech = (process.env.SQL_TALLY_DB_TECH || 'mssql').toLowerCase();
 
-    // 2. Resolve Company
-    let companyName = process.env.TALLY_COMPANY || 'VIJAYA DURGA AQUA FEEDS & NEEDS';
-    try {
-      const configRows = await executeQuery(connection, "SELECT name, value FROM config");
-      const companyConfig = configRows.find(r => r.name === 'Company Name');
-      if (companyConfig && companyConfig.value) {
-        companyName = companyConfig.value;
-        console.log(`🏢 Dynamically resolved company name from staging DB: "${companyName}"`);
-      }
-    } catch (configErr) {
-      console.warn('⚠️ Could not query config table from staging DB, using default/env company name:', configErr.message);
-    }
-
-    let company;
-    if (targetCompanyId) {
-      company = await Company.findById(targetCompanyId);
-    } else {
-      company = await Company.findOne({ name: companyName });
-      if (!company) {
-        company = await Company.create({
-          name: companyName,
-          ownerName: 'Tally Admin',
-          phone: '',
-          email: '',
-          address: 'Tally Integrated Company',
-          city: '',
-          state: '',
-          currency: 'INR'
-        });
-        console.log(`🏢 Created default Company: ${companyName}`);
+    // 2. Discover all staging databases (for MongoDB)
+    let stagingDbs = [];
+    if (dbTech === 'mongodb') {
+      try {
+        const adminDb = baseConnection.client.db('admin');
+        const dbList = await adminDb.admin().listDatabases();
+        stagingDbs = dbList.databases
+          .filter(d => d.name.startsWith('tallydb_'))
+          .map(d => d.name);
+      } catch (err) {
+        console.warn('⚠️ Could not list MongoDB databases, using default schema name.', err.message);
       }
     }
-    const companyId = company._id;
+
+    if (stagingDbs.length === 0) {
+      stagingDbs = [process.env.SQL_TALLY_DB_NAME || 'tallydb'];
+    }
+
+    console.log(`🔍 Found staging databases to sync: ${stagingDbs.join(', ')}`);
+
+    for (const dbName of stagingDbs) {
+      console.log(`\n🏢 Starting sync from staging database: "${dbName}"`);
+      
+      let dbConn;
+      if (dbTech === 'mongodb') {
+        dbConn = baseConnection.client.db(dbName);
+      } else {
+        dbConn = baseConnection;
+      }
+      connection = dbConn;
+
+      // 3. Resolve Company
+      let companyName = process.env.TALLY_COMPANY || 'VIJAYA DURGA AQUA FEEDS & NEEDS';
+      try {
+        const configRows = await executeQuery(connection, "SELECT name, value FROM config");
+        const companyConfig = configRows.find(r => r.name === 'Company Name');
+        if (companyConfig && companyConfig.value) {
+          companyName = companyConfig.value;
+          console.log(`🏢 Dynamically resolved company name from staging DB "${dbName}": "${companyName}"`);
+        }
+      } catch (configErr) {
+        console.warn(`⚠️ Could not query config table from staging DB "${dbName}":`, configErr.message);
+      }
+
+      let company;
+      if (targetCompanyId) {
+        company = await Company.findById(targetCompanyId);
+      } else {
+        company = await Company.findOne({ name: companyName });
+        if (!company) {
+          company = await Company.create({
+            name: companyName,
+            ownerName: 'Tally Admin',
+            phone: '',
+            email: '',
+            address: 'Tally Integrated Company',
+            city: '',
+            state: '',
+            currency: 'INR'
+          });
+          console.log(`🏢 Created default Company: ${companyName}`);
+        }
+      }
+      const companyId = company._id;
 
     // 3. Sync Warehouses (Tally Godowns)
     console.log('🔄 Syncing Warehouses (Godowns)...');
@@ -619,6 +652,7 @@ async function syncTallyData(targetCompanyId = null) {
       );
       stats.purchaseOrders++;
     }
+    } // End of stagingDbs loop
 
     const duration = ((new Date() - stats.startTime) / 1000).toFixed(1);
     console.log(`✅ Tally sync completed in ${duration}s! Sync stats:`, stats);
@@ -638,7 +672,7 @@ async function syncTallyData(targetCompanyId = null) {
     };
   } finally {
     isSyncRunning = false;
-    await closeDbConnection(connection);
+    await closeDbConnection(baseConnection || connection);
   }
 }
 
