@@ -41,3 +41,5 @@ Thumbs.db
 # Tally Utility specific temp files
 tally-database-loader-utility-1.0.43/csv/
 tally-database-loader-utility-1.0.43/error-log.txt
+tally-database-loader-utility-1.0.43/import-log.txt
+tally-database-loader-utility-1.0.43/*-log.txt

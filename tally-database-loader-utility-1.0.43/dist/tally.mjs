@@ -4,7 +4,7 @@ import process from 'node:process';
 import http from 'node:http';
 import readline from 'node:readline';
 import stream from 'node:stream';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { utility } from './utility.mjs';
 import { logger } from './logger.mjs';
 import { database } from './database.mjs';

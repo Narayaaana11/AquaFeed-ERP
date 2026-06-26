@@ -65,12 +65,7 @@ else { // continuous sync
             }
         }
         catch (err) {
-            if (typeof err == 'string' && err.endsWith('is closed in Tally')) {
-                logger.logMessage(err + ' [%s]', new Date().toLocaleString());
-            }
-            else {
-                throw err;
-            }
+            logger.logMessage('Error in scheduled Tally sync: ' + (err.message || err) + ' [%s]', new Date().toLocaleString());
         }
     };
     if (!tally.config.company) { // do not process continuous sync for blank company
