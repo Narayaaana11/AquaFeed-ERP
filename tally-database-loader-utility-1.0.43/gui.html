@@ -203,6 +203,11 @@
                 document.getElementById('database_loadmethod').value = 'file';
                 toggleDatabaseRelatedInputs(true);
             }
+            else if (e.value === 'mongodb') {
+                document.getElementById('database_port').value = 27017;
+                document.getElementById('database_loadmethod').value = 'insert';
+                toggleDatabaseRelatedInputs(true);
+            }
             else if (e.value == 'bigquery') {
                 document.getElementById('database_port').value = 0;
                 document.getElementById('database_loadmethod').value = 'file';
@@ -448,6 +453,7 @@
                             <option value="mssql" selected>Microsoft SQL Server</option>
                             <option value="mysql">MySQL / MariaDB Server</option>
                             <option value="postgres">PostgreSQL Server</option>
+                            <option value="mongodb">MongoDB</option>
                             <option value="bigquery">Google BigQuery</option>
                             <option value="adls">Azure Data Lake</option>
                             <option value="csv">CSV</option>

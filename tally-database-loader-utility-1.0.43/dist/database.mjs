@@ -6,12 +6,15 @@ import postgres from 'pg';
 import { BigQuery } from '@google-cloud/bigquery';
 import { from as pgLoadInto } from 'pg-copy-streams';
 import { logger } from './logger.mjs';
+import { MongoClient } from 'mongodb';
 let connectionPoolMysql;
 class _database {
     config;
     maxQuerySize = 65535; //maximum size of SQL query to be executed
     bigquery = new BigQuery();
     connectionPoolPostgres = new postgres.Pool({});
+    connectionPoolMongodb = null;
+    dbMongodb = null;
     constructor() {
         try {
             this.config = JSON.parse(fs.readFileSync('./config.json', 'utf8'))['database'];
@@ -139,6 +142,20 @@ class _database {
                         throw errorMessage || connErr;
                     }
                 }
+                else if (this.config.technology == 'mongodb') {
+                    let mongoUri = this.config.server || 'mongodb://localhost:27017';
+                    if (!mongoUri.startsWith('mongodb://') && !mongoUri.startsWith('mongodb+srv://')) {
+                        let auth = '';
+                        if (this.config.username && this.config.password) {
+                            auth = `${encodeURIComponent(this.config.username)}:${encodeURIComponent(this.config.password)}@`;
+                        }
+                        let portStr = this.config.port ? `:${this.config.port}` : '';
+                        mongoUri = `mongodb://${auth}${this.config.server || 'localhost'}${portStr}`;
+                    }
+                    this.connectionPoolMongodb = new MongoClient(mongoUri);
+                    await this.connectionPoolMongodb.connect();
+                    this.dbMongodb = this.connectionPoolMongodb.db(this.config.schema || 'tallydb');
+                }
                 else
                     ;
                 resolve();
@@ -158,6 +175,11 @@ class _database {
                 }
                 else if (this.config.technology == 'mysql') {
                     await connectionPoolMysql.end();
+                }
+                else if (this.config.technology == 'mongodb') {
+                    if (this.connectionPoolMongodb) {
+                        await this.connectionPoolMongodb.close();
+                    }
                 }
                 else
                     ;
@@ -287,6 +309,19 @@ class _database {
     }
     bulkLoad(csvFile, targetTable, lstFieldType) {
         return new Promise(async (resolve, reject) => {
+            if (this.config.technology == 'mongodb') {
+                try {
+                    let txtCSV = fs.readFileSync(csvFile, 'utf-8');
+                    let lstData = this.csvToJsonArray(txtCSV, targetTable, lstFieldType);
+                    if (lstData.length > 0) {
+                        await this.dbMongodb.collection(targetTable).insertMany(lstData);
+                    }
+                    return resolve(lstData.length);
+                } catch (err) {
+                    logger.logError(`database.bulkLoad(${targetTable})`, err);
+                    return reject(err);
+                }
+            }
             let sqlQuery = '';
             try {
                 sqlQuery = '';
@@ -377,6 +412,17 @@ class _database {
     }
     bulkLoadTableJson(targetTable, lstTableData) {
         return new Promise(async (resolve, reject) => {
+            if (this.config.technology == 'mongodb') {
+                try {
+                    if (lstTableData.length > 0) {
+                        await this.dbMongodb.collection(targetTable.name).insertMany(lstTableData);
+                    }
+                    return resolve(lstTableData.length);
+                } catch (err) {
+                    logger.logError(`database.bulkLoadTableJson(${targetTable.name})`, err);
+                    return reject(err);
+                }
+            }
             let retval = 0;
             try {
                 // convert all the boolean fields from true/false to 1/0
@@ -412,7 +458,36 @@ class _database {
         return new Promise(async (resolve, reject) => {
             try {
                 let retval = 0;
-                if (this.config.technology.toLowerCase() == 'mysql') {
+                if (this.config.technology.toLowerCase() == 'mongodb') {
+                    let queries = Array.isArray(sqlQuery) ? sqlQuery : [sqlQuery];
+                    let totalCount = 0;
+                    for (let q of queries) {
+                        q = q.trim();
+                        if (q.toLowerCase().startsWith('truncate table ')) {
+                            let tblName = q.split(/\s+/)[2].replace(';', '');
+                            await this.dbMongodb.collection(tblName).deleteMany({});
+                        } else if (q.toLowerCase().startsWith('insert into config')) {
+                            let valuesPart = q.substring(q.toLowerCase().indexOf('values') + 6).trim();
+                            let matches = valuesPart.match(/\(([^)]+)\)/g);
+                            if (matches) {
+                                let docs = [];
+                                for (let match of matches) {
+                                    let content = match.slice(1, -1);
+                                    let parts = content.slice(0).split(/,(?=(?:[^']*'[^']*')*[^']*$)/);
+                                    let nameVal = parts[0].trim().replace(/^'|'$/g, '').replace(/''/g, "'");
+                                    let valVal = parts[1].trim().replace(/^'|'$/g, '').replace(/''/g, "'");
+                                    docs.push({ name: nameVal, value: valVal });
+                                }
+                                if (docs.length > 0) {
+                                    let res = await this.dbMongodb.collection('config').insertMany(docs);
+                                    totalCount += res.insertedCount;
+                                }
+                            }
+                        }
+                    }
+                    retval = totalCount;
+                }
+                else if (this.config.technology.toLowerCase() == 'mysql') {
                     retval = (await this.executeMysql(sqlQuery)).rowCount;
                 }
                 else if (this.config.technology.toLowerCase() == 'mssql') {
@@ -462,6 +537,17 @@ class _database {
     }
     truncateTables(lstTables) {
         return new Promise(async (resolve, reject) => {
+            if (this.config.technology == 'mongodb') {
+                try {
+                    for (let i = 0; i < lstTables.length; i++) {
+                        await this.dbMongodb.collection(lstTables[i]).deleteMany({});
+                    }
+                    return resolve();
+                } catch (err) {
+                    logger.logError('database.truncateTables()', err);
+                    return reject(err);
+                }
+            }
             try {
                 let lstTruncateSQL = [];
                 for (let i = 0; i < lstTables.length; i++) {
@@ -499,7 +585,13 @@ class _database {
         let retval = [];
         return new Promise(async (resolve, reject) => {
             try {
-                if (this.config.technology == 'mssql') {
+                if (this.config.technology == 'mongodb') {
+                    let collections = await this.dbMongodb.listCollections().toArray();
+                    for (const col of collections) {
+                        retval.push(col.name);
+                    }
+                }
+                else if (this.config.technology == 'mssql') {
                     let sqlQuery = `select TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_CATALOG = '${this.config.schema}' and TABLE_TYPE = 'BASE TABLE' order by TABLE_NAME`;
                     let result = await this.readMssql(sqlQuery);
                     for (const row of result) {
@@ -532,6 +624,9 @@ class _database {
     }
     createDatabaseTables(syncMode) {
         return new Promise(async (resolve, reject) => {
+            if (this.config.technology == 'mongodb') {
+                return resolve();
+            }
             let scriptFileName = './database-structure.sql';
             if (syncMode == 'incremental')
                 scriptFileName = './database-structure-incremental.sql';

@@ -23,9 +23,25 @@ async function getDbConnection() {
   const password = process.env.SQL_TALLY_DB_PASSWORD || 'admin';
   const ssl = process.env.SQL_TALLY_DB_SSL === 'true';
 
-  console.log(`🔌 Connecting to Tally SQL database (${dbTech}) at ${host}:${port}/${database}...`);
+  console.log(`🔌 Connecting to Tally database (${dbTech}) at ${host}:${port}/${database}...`);
 
-  if (dbTech === 'mssql') {
+  if (dbTech === 'mongodb') {
+    const { MongoClient } = require('mongodb');
+    let mongoUri = host;
+    if (!mongoUri.startsWith('mongodb://') && !mongoUri.startsWith('mongodb+srv://')) {
+      let auth = '';
+      if (user && password) {
+        auth = `${encodeURIComponent(user)}:${encodeURIComponent(password)}@`;
+      }
+      let portStr = port ? `:${port}` : '';
+      mongoUri = `mongodb://${auth}${host}${portStr}`;
+    }
+    const client = new MongoClient(mongoUri);
+    await client.connect();
+    const db = client.db(database);
+    db.client = client;
+    return db;
+  } else if (dbTech === 'mssql') {
     const sql = require('mssql');
     const config = {
       user,
@@ -73,15 +89,19 @@ async function closeDbConnection(connection) {
   if (!connection) return;
   const dbTech = (process.env.SQL_TALLY_DB_TECH || 'mssql').toLowerCase();
   try {
-    if (dbTech === 'mssql') {
+    if (dbTech === 'mongodb') {
+      if (connection.client) {
+        await connection.client.close();
+      }
+    } else if (dbTech === 'mssql') {
       const sql = require('mssql');
       await sql.close();
     } else {
       await connection.end();
     }
-    console.log('🔌 Closed Tally SQL database connection.');
+    console.log(`🔌 Closed Tally ${dbTech} database connection.`);
   } catch (err) {
-    console.error('Error closing Tally SQL connection:', err.message);
+    console.error(`Error closing Tally ${dbTech} connection:`, err.message);
   }
 }
 
@@ -90,6 +110,105 @@ async function closeDbConnection(connection) {
  */
 async function executeQuery(connection, queryStr, params = []) {
   const dbTech = (process.env.SQL_TALLY_DB_TECH || 'mssql').toLowerCase();
+
+  if (dbTech === 'mongodb') {
+    const normalized = queryStr.replace(/\s+/g, ' ').trim();
+    
+    // 1. Warehouse/Godown query
+    if (normalized.startsWith('SELECT guid, name, parent, address FROM mst_godown')) {
+      return await connection.collection('mst_godown').find({}, { projection: { guid: 1, name: 1, parent: 1, address: 1 } }).toArray();
+    }
+    
+    // 2. Customers (Sundry Debtors) query
+    if (normalized.includes('Sundry Debtors')) {
+      return await connection.collection('mst_ledger').aggregate([
+        {
+          $lookup: {
+            from: 'mst_group',
+            localField: 'parent',
+            foreignField: 'name',
+            as: 'group'
+          }
+        },
+        {
+          $unwind: { path: '$group', preserveNullAndEmptyArrays: true }
+        },
+        {
+          $match: {
+            $or: [
+              { parent: 'Sundry Debtors' },
+              { 'group.primary_group': 'Sundry Debtors' },
+              { 'group.parent': 'Sundry Debtors' }
+            ]
+          }
+        }
+      ]).toArray();
+    }
+    
+    // 3. Suppliers (Sundry Creditors) query
+    if (normalized.includes('Sundry Creditors')) {
+      return await connection.collection('mst_ledger').aggregate([
+        {
+          $lookup: {
+            from: 'mst_group',
+            localField: 'parent',
+            foreignField: 'name',
+            as: 'group'
+          }
+        },
+        {
+          $unwind: { path: '$group', preserveNullAndEmptyArrays: true }
+        },
+        {
+          $match: {
+            $or: [
+              { parent: 'Sundry Creditors' },
+              { 'group.primary_group': 'Sundry Creditors' },
+              { 'group.parent': 'Sundry Creditors' }
+            ]
+          }
+        }
+      ]).toArray();
+    }
+    
+    // 4. Products (Stock Items) query
+    if (normalized.startsWith('SELECT guid, name, parent, category, alias, description, notes, part_number, uom, closing_balance, closing_rate FROM mst_stock_item')) {
+      return await connection.collection('mst_stock_item').find({}).toArray();
+    }
+    
+    // 5. Sales Vouchers query
+    if (normalized.includes('Sales')) {
+      let salesVchTypes = await connection.collection('mst_vouchertype').find({ parent: 'Sales' }).toArray();
+      let salesVchNames = salesVchTypes.map(vt => vt.name);
+      salesVchNames.push('Sales');
+      return await connection.collection('trn_voucher').find({
+        voucher_type: { $in: salesVchNames }
+      }).toArray();
+    }
+    
+    // 6. Purchase Order Vouchers query
+    if (normalized.includes('Purchase Order')) {
+      let poVchTypes = await connection.collection('mst_vouchertype').find({ parent: 'Purchase Order' }).toArray();
+      let poVchNames = poVchTypes.map(vt => vt.name);
+      poVchNames.push('Purchase Order');
+      return await connection.collection('trn_voucher').find({
+        voucher_type: { $in: poVchNames }
+      }).toArray();
+    }
+    
+    // 7. Inventory rows query
+    if (normalized.startsWith('SELECT item, quantity, rate, amount, discount_amount, godown FROM trn_inventory WHERE guid = ?') ||
+        normalized.startsWith('SELECT item, quantity, rate, amount, discount_amount FROM trn_inventory WHERE guid = ?')) {
+      return await connection.collection('trn_inventory').find({ guid: params[0] }).toArray();
+    }
+    
+    // 8. Accounting rows query
+    if (normalized.startsWith('SELECT ledger, amount FROM trn_accounting WHERE guid = ?')) {
+      return await connection.collection('trn_accounting').find({ guid: params[0] }).toArray();
+    }
+    
+    return [];
+  }
 
   if (dbTech === 'mssql') {
     let request = connection.request();

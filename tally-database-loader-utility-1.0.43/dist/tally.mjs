@@ -129,7 +129,7 @@ class _tally {
                             fs.rmSync('./csv', { recursive: true });
                         fs.mkdirSync('./csv');
                         // check if all the tables required exists in database and create if not
-                        if (/^(mssql|mysql|postgres)$/g.test(database.config.technology)) {
+                        if (/^(mssql|mysql|postgres|mongodb)$/g.test(database.config.technology)) {
                             logger.logMessage('Verifying required database tables [%s]', new Date().toLocaleDateString());
                             let lstTables = [];
                             lstTables.push(...this.lstTableMasterYaml);
@@ -397,7 +397,7 @@ class _tally {
                     }
                     fs.mkdirSync('./csv');
                     // check if all the tables required exists in database and create if not
-                    if (/^(mssql|mysql|postgres)$/g.test(database.config.technology)) {
+                    if (/^(mssql|mysql|postgres|mongodb)$/g.test(database.config.technology)) {
                         logger.logMessage('Verifying required database tables [%s]', new Date().toLocaleDateString());
                         //fetch list of existing tables in database
                         let lstDatabaseTables = await database.listDatabaseTables();
@@ -418,7 +418,7 @@ class _tally {
                             await database.createDatabaseTables(this.config.sync);
                         }
                     }
-                    if (/^(mssql|mysql|postgres|bigquery|csv)$/g.test(database.config.technology)) {
+                    if (/^(mssql|mysql|postgres|bigquery|csv|mongodb)$/g.test(database.config.technology)) {
                         //update active company information before starting import
                         logger.logMessage('Updating company information configuration table [%s]', new Date().toLocaleDateString());
                         await this.saveCompanyInfo();
@@ -513,7 +513,7 @@ class _tally {
                             await database.truncateTables(lstTables); //truncate tables
                         }
                     }
-                    if (/^(mssql|mysql|postgres)$/g.test(database.config.technology)) {
+                    if (/^(mssql|mysql|postgres|mongodb)$/g.test(database.config.technology)) {
                         if (this.isDefinitionYAML) {
                             //perform CSV file based bulk import into database
                             logger.logMessage('Loading CSV files to database tables [%s]', new Date().toLocaleString());
@@ -811,7 +811,7 @@ class _tally {
                     let altIdMaster = parseInt(lstCompanyInfoParts[4]);
                     let altIdTransaction = parseInt(lstCompanyInfoParts[5]);
                     //clear config table of database and insert active company info to config table
-                    if (/^(mssql|mysql|postgres)$/g.test(database.config.technology)) {
+                    if (/^(mssql|mysql|postgres|mongodb)$/g.test(database.config.technology)) {
                         await database.executeNonQuery('truncate table config;');
                         await database.executeNonQuery(`insert into config(name,value) values('Update Timestamp','${new Date().toLocaleString()}'),('Company Name','${companyName}'),('Period From','${this.config.fromdate}'),('Period To','${this.config.todate}'),('Last AlterID Master','${altIdMaster}'),('Last AlterID Transaction','${altIdTransaction}');`);
                     }
