@@ -69,6 +69,11 @@ const productSchema = new mongoose.Schema(
       ref: 'Company',
       required: true,
     },
+    tallyGuid: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
   },
   { timestamps: true }
 );

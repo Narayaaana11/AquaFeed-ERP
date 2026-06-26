@@ -277,4 +277,29 @@ const clearCompanyData = async (req, res, next) => {
   }
 };
 
-module.exports = { getCompany, updateCompany, getUsers, createUser, updateUser, updateProfile, loadDemoData, clearCompanyData };
+// POST /api/settings/sync-tally
+const syncTallyData = async (req, res, next) => {
+  try {
+    const tallySyncService = require('../services/tallySyncService');
+    const result = await tallySyncService.syncTallyData(req.companyId);
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { 
+  getCompany, 
+  updateCompany, 
+  getUsers, 
+  createUser, 
+  updateUser, 
+  updateProfile, 
+  loadDemoData, 
+  clearCompanyData,
+  syncTallyData
+};
