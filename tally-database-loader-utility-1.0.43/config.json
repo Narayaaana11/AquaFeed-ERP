@@ -17,7 +17,7 @@
         "todate": "2026-03-31",
         "sync": "full",
         "batchsize": 5000,
-        "frequency": 0,
-        "company": ""
+        "frequency": 60,
+        "company": "VIJAYA DURGA AQUA FEEDS & NEEDS"
     }
 }
