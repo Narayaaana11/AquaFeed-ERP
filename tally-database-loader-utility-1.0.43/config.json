@@ -1,13 +1,13 @@
 {
     "database": {
-        "technology": "mssql",
-        "server": "localhost",
+        "technology": "mongodb",
+        "server": "mongodb+srv://aquafeederp:aquafeederp@aquafeederp1.058dwtk.mongodb.net/",
         "port": 0,
         "ssl": false,
         "schema": "tallydb",
-        "username": "sa",
-        "password": "admin",
-        "loadmethod": "file"
+        "username": "",
+        "password": "",
+        "loadmethod": "insert"
     },
     "tally": {
         "definition": "tally-export-config.yaml",
