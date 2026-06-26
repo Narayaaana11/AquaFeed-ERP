@@ -207,6 +207,11 @@ async function executeQuery(connection, queryStr, params = []) {
       return await connection.collection('trn_accounting').find({ guid: params[0] }).toArray();
     }
     
+    // 9. Config query
+    if (normalized.includes('FROM config')) {
+      return await connection.collection('config').find({}).toArray();
+    }
+    
     return [];
   }
 
@@ -258,8 +263,22 @@ async function syncTallyData(targetCompanyId = null) {
   };
 
   try {
-    // 1. Resolve Company
-    const companyName = process.env.TALLY_COMPANY || 'VIJAYA DURGA AQUA FEEDS & NEEDS';
+    // 1. Establish connection to Tally SQL Database
+    connection = await getDbConnection();
+
+    // 2. Resolve Company
+    let companyName = process.env.TALLY_COMPANY || 'VIJAYA DURGA AQUA FEEDS & NEEDS';
+    try {
+      const configRows = await executeQuery(connection, "SELECT name, value FROM config");
+      const companyConfig = configRows.find(r => r.name === 'Company Name');
+      if (companyConfig && companyConfig.value) {
+        companyName = companyConfig.value;
+        console.log(`🏢 Dynamically resolved company name from staging DB: "${companyName}"`);
+      }
+    } catch (configErr) {
+      console.warn('⚠️ Could not query config table from staging DB, using default/env company name:', configErr.message);
+    }
+
     let company;
     if (targetCompanyId) {
       company = await Company.findById(targetCompanyId);
@@ -280,9 +299,6 @@ async function syncTallyData(targetCompanyId = null) {
       }
     }
     const companyId = company._id;
-
-    // 2. Establish connection to Tally SQL Database
-    connection = await getDbConnection();
 
     // 3. Sync Warehouses (Tally Godowns)
     console.log('🔄 Syncing Warehouses (Godowns)...');

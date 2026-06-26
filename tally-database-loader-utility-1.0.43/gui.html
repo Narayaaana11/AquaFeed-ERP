@@ -367,24 +367,29 @@
         }
 
         async function populateCompanyListSuggesation() {
-            let objConfig = prepareConfigObj();
-            let resp = await fetch('http://localhost:8997/list-company', {
-                method: 'POST',
-                body: JSON.stringify({ server: objConfig['tally']['server'], port: objConfig['tally']['port'] }),
-                mode: "no-cors",
-                headers: {
-                    'Content-Type': 'application/json'
+            try {
+                let objConfig = prepareConfigObj();
+                let resp = await fetch('http://localhost:8997/list-company', {
+                    method: 'POST',
+                    body: JSON.stringify({ server: objConfig['tally']['server'], port: objConfig['tally']['port'] }),
+                    mode: "no-cors",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                let respData = await resp.text();
+                const xmlParser = new DOMParser();
+                const xmlDoc = xmlParser.parseFromString(respData, "application/xml");
+                let rows = xmlDoc.getElementsByTagName('ROW');
+                if (rows && rows.length > 0) {
+                    document.getElementById('dl_tally_company').innerHTML = '';
+                    for (let i = 0; i < rows.length; i++) {
+                        document.getElementById('dl_tally_company').innerHTML += `<option value="${rows[i].textContent}"></option>`;
+                    }
                 }
-            });
-            let respData = await resp.text();
-            const xmlParser = new DOMParser();
-            const xmlDoc = xmlParser.parseFromString(respData, "application/xml");
-            document.getElementById('dl_tally_company').innerHTML = '';
-            xmlDoc.firstChild.childNodes.forEach(p => {
-                if (p.nodeName == 'ROW') {
-                    document.getElementById('dl_tally_company').innerHTML += `<option value="${p.textContent}"></option>`;
-                }
-            });
+            } catch (err) {
+                console.warn('Could not load company suggestions dynamically:', err);
+            }
         }
 
         async function checkTallyStatus() {
@@ -583,7 +588,23 @@
                     <label for="tally_company" class="col-sm-3 col-form-label">Company</label>
                     <div class="col-sm-9">
                         <input type="text" class="form-control" id="tally_company" list="dl_tally_company">
-                        <datalist id="dl_tally_company"></datalist>
+                        <datalist id="dl_tally_company">
+                            <option value="Sri Vijaya Durga Aqua Traders"></option>
+                            <option value="VIJAYA DURGA AQUA FEEDS AND NEEDS(2025-2026)"></option>
+                            <option value="VIJAYA DURGA AQUA FEEDS AND NEEDS-2021-2022"></option>
+                            <option value="VIJAYA DURGA AQUA FEEDS AND NEEDS-2022-23"></option>
+                            <option value="VIJAYA DURGA AQUA FEEDS AND NEEDS-2024-2025"></option>
+                            <option value="VIJAYA DURGA AQUA FEEDS AND NEEDS-23-24"></option>
+                            <option value="VIJAYADURGA A TO Z AQUA RYTHU BAZAR 25-26"></option>
+                            <option value="VIJAYADURGA A TO Z AQUA RYTHU BAZAR-24-25"></option>
+                            <option value="VIJAYADURGA A TO Z AQUA RYTHU BAZAR-26-27"></option>
+                            <option value="VIJAYADURGA AQUA FEEDS AND NEEDS(2026-2027)"></option>
+                            <option value="Vijaya Durga Aqua Feeds & Needs-2020-2021"></option>
+                            <option value="Vijaya Durga Aqua Feeds and Needs - (from 1-Apr-2017)"></option>
+                            <option value="Vijaya Durga Aqua Feeds and Needs - (from 1-Apr-2018)"></option>
+                            <option value="Vijaya Durga Aqua Feeds and Needs -- (from 1-Apr-2019)"></option>
+                            <option value="Sri Vijaya Durga Aqua Traders-2020-2021"></option>
+                        </datalist>
                     </div>
                 </div>
                 <div class="mb-2">
