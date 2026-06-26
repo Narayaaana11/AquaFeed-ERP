@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { FormInput, FormSelect } from "@/components/forms";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { validationRules } from "@/lib/validations";
-import { Building2, Users, Plus, Pencil, Trash2, X, ShieldAlert, Eye, EyeOff, Upload } from "lucide-react";
+import { Building2, Users, Plus, Pencil, Trash2, X, ShieldAlert, Eye, EyeOff, Upload, Database, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useCompanySettings,
@@ -15,6 +15,7 @@ import {
   useCreateUser,
   useUpdateUser,
   useClearCompanyData,
+  useSyncTally,
 } from "@/hooks/useSettings";
 
 const tabs = ["Company", "Users & Roles"] as const;
@@ -76,6 +77,19 @@ export default function Settings() {
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
   const clearDataMutation = useClearCompanyData();
+  const syncTallyMutation = useSyncTally();
+  const [syncStats, setSyncStats] = useState<any>(null);
+
+  const handleSyncTally = async () => {
+    try {
+      const res = await syncTallyMutation.mutateAsync();
+      if (res.success && res.stats) {
+        setSyncStats(res.stats);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [clearPassword, setClearPassword] = useState('');
@@ -405,6 +419,66 @@ export default function Settings() {
                 </button>
               </div>
             </form>
+          )}
+
+          {isOwner && (
+            <div className="mt-8 border border-border bg-surface rounded-xl p-5 shadow-card">
+              <div className="flex items-center gap-2.5 mb-2">
+                <Database className="w-5 h-5 text-brand" />
+                <h3 className="font-display font-bold text-foreground text-sm">Tally Integration & Sync</h3>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 mb-4">
+                Synchronize customers, suppliers, products, warehouses, sales invoices, and purchase orders from your Tally ERP database loader utility directly into your MongoDB cloud space.
+              </p>
+              
+              {syncStats && (
+                <div className="mb-4 bg-background border border-border rounded-lg p-3 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Warehouses:</span>{' '}
+                    <strong className="text-foreground">{syncStats.warehouses}</strong>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Customers:</span>{' '}
+                    <strong className="text-foreground">{syncStats.customers}</strong>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Suppliers:</span>{' '}
+                    <strong className="text-foreground">{syncStats.suppliers}</strong>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Products:</span>{' '}
+                    <strong className="text-foreground">{syncStats.products}</strong>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Sales Invoices:</span>{' '}
+                    <strong className="text-foreground">{syncStats.invoices}</strong>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Purchase Orders:</span>{' '}
+                    <strong className="text-foreground">{syncStats.purchaseOrders}</strong>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSyncTally}
+                disabled={syncTallyMutation.isPending}
+                className="h-10 px-6 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors shadow-sm flex items-center gap-2"
+              >
+                {syncTallyMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Syncing Tally Database...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Sync with Tally Now</span>
+                  </>
+                )}
+              </button>
+            </div>
           )}
 
           {isOwner && (

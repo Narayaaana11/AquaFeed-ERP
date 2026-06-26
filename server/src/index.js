@@ -310,6 +310,12 @@ markOverdueInvoices();
 setInterval(markOverdueInvoices, 6 * 60 * 60 * 1000);
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Tally Synchronization Scheduler
+if (process.env.TALLY_ENABLED === 'true') {
+  const tallySyncService = require('./services/tallySyncService');
+  tallySyncService.startSyncScheduler();
+}
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 AquaFeed ERP Server running on http://localhost:${PORT}`);

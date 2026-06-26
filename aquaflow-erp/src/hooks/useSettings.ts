@@ -107,3 +107,22 @@ export function useClearCompanyData() {
     onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to clear data'),
   });
 }
+
+export function useSyncTally() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post('/settings/sync-tally');
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries();
+      toast.success(data.message || 'Tally database synchronized successfully!');
+    },
+    onError: (err: any) => {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to sync with Tally');
+    },
+  });
+}
+
