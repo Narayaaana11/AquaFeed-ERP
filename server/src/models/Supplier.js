@@ -62,7 +62,6 @@ const supplierSchema = new mongoose.Schema(
     },
     tallyGuid: {
       type: String,
-      unique: true,
       sparse: true,
     },
   },
@@ -71,5 +70,6 @@ const supplierSchema = new mongoose.Schema(
 
 supplierSchema.index({ company: 1, isActive: 1 });
 supplierSchema.index({ company: 1, name: 1 });
+supplierSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Supplier', supplierSchema);

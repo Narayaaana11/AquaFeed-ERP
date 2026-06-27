@@ -242,6 +242,22 @@ async function executeQuery(connection, queryStr, params = []) {
 }
 
 /**
+ * Ensures that the legacy tallyGuid_1 unique index is dropped
+ * so that compound unique indexes { company: 1, tallyGuid: 1 } can be created
+ */
+async function ensureCompoundIndexes() {
+  const models = [Warehouse, Customer, Supplier, Product, Invoice, PurchaseOrder];
+  for (const model of models) {
+    try {
+      await model.collection.dropIndex('tallyGuid_1');
+      console.log(`🗑️ Dropped legacy unique index tallyGuid_1 from ${model.modelName} collection.`);
+    } catch (err) {
+      // index might not exist or already dropped, ignore
+    }
+  }
+}
+
+/**
  * Synchronizes data from Tally SQL Database to MongoDB
  */
 async function syncTallyData(targetCompanyId = null) {
@@ -251,6 +267,10 @@ async function syncTallyData(targetCompanyId = null) {
   }
 
   isSyncRunning = true;
+  
+  // Clean up legacy indexes before proceeding
+  await ensureCompoundIndexes();
+
   let connection = null;
   const stats = {
     warehouses: 0,
@@ -331,7 +351,8 @@ async function syncTallyData(targetCompanyId = null) {
       if (targetCompanyId) {
         company = await Company.findById(targetCompanyId);
       } else {
-        company = await Company.findOne({ name: companyName });
+        // Case-insensitive lookup to prevent duplicate company profiles due to casing differences
+        company = await Company.findOne({ name: { $regex: new RegExp('^' + companyName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '$', 'i') } });
         if (!company) {
           company = await Company.create({
             name: companyName,

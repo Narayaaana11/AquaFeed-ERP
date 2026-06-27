@@ -65,7 +65,6 @@ const customerSchema = new mongoose.Schema(
     },
     tallyGuid: {
       type: String,
-      unique: true,
       sparse: true,
     },
   },
@@ -73,6 +72,7 @@ const customerSchema = new mongoose.Schema(
 );
 
 customerSchema.index({ company: 1, isActive: 1 });
+customerSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, sparse: true });
 
 // Virtual: available credit
 customerSchema.virtual('availableCredit').get(function () {
