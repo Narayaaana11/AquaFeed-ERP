@@ -817,6 +817,7 @@ class _tally {
                     strCompanyInfo = strCompanyInfo.replace(/\",\"†\",\r\n/g, '').substr(1);
                     let lstCompanyInfoParts = strCompanyInfo.split(/\",\"/g);
                     let companyName = lstCompanyInfoParts[1];
+                    companyName = utility.String.unescapeHTML(companyName);
                     companyName = companyName.replace(/'/g, '\\"');
                     if (this.config.fromdate == 'auto' || this.config.todate == 'auto') { //auto assign from/to from company info for detection mode
                         this.config.fromdate = convertDateYYYYMMDD(lstCompanyInfoParts[2]);
@@ -1313,7 +1314,7 @@ class _tally {
                         //check if NAME attribute is present to assign name property
                         if (line.startsWith(`<${targetCollection.toUpperCase()} NAME=`)) {
                             let reName = /NAME=\"([^\"]+)\"/g.exec(line);
-                            let itemName = reName ? reName[1] : '';
+                            let itemName = reName ? utility.String.unescapeHTML(reName[1]) : '';
                             Object.defineProperty(currObj, 'name', { value: itemName, writable: true, enumerable: true, configurable: true });
                         }
                         retval.push(currObj);
