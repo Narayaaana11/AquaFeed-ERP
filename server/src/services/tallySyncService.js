@@ -7,6 +7,7 @@ const Product = require('../models/Product');
 const Inventory = require('../models/Inventory');
 const Invoice = require('../models/Invoice');
 const PurchaseOrder = require('../models/PurchaseOrder');
+const User = require('../models/User');
 
 let isSyncRunning = false;
 let syncIntervalId = null;
@@ -295,23 +296,9 @@ async function syncTallyData(targetCompanyId = null) {
         const adminDb = baseConnection.client.db('admin');
         const dbList = await adminDb.admin().listDatabases();
         
-        let filterCompanyName = null;
-        if (targetCompanyId) {
-          const filterCompany = await Company.findById(targetCompanyId);
-          if (filterCompany) {
-            filterCompanyName = filterCompany.name;
-          }
-        }
-        
         stagingDbs = dbList.databases
           .filter(d => d.name.startsWith('tallydb_'))
           .map(d => d.name);
-          
-        if (filterCompanyName) {
-          const targetDbName = 'tallydb_' + filterCompanyName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').trim().replace(/^_|_$/g, '').slice(0, 38).replace(/_$/, '');
-          console.log(`🎯 Manual sync trigger for company "${filterCompanyName}". Restricting staging DBs to: ${targetDbName}`);
-          stagingDbs = stagingDbs.filter(name => name === targetDbName);
-        }
       } catch (err) {
         console.warn('⚠️ Could not list MongoDB databases, using default schema name.', err.message);
       }
@@ -351,9 +338,24 @@ async function syncTallyData(targetCompanyId = null) {
       if (targetCompanyId) {
         company = await Company.findById(targetCompanyId);
       } else {
-        // Case-insensitive lookup to prevent duplicate company profiles due to casing differences
-        company = await Company.findOne({ name: { $regex: new RegExp('^' + companyName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '$', 'i') } });
+        // Resolve company to the owner's main company profile to consolidate data
+        const ownerUser = await User.findOne({ email: 'owner@vijayadurga.com' });
+        if (ownerUser && ownerUser.company) {
+          company = await Company.findById(ownerUser.company);
+        }
+        
         if (!company) {
+          // Fallback to case-insensitive name match
+          company = await Company.findOne({ name: { $regex: new RegExp('^' + companyName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '$', 'i') } });
+        }
+        
+        if (!company) {
+          // Fallback to any existing company in the database
+          company = await Company.findOne();
+        }
+        
+        if (!company) {
+          // Last resort: create a new company profile
           company = await Company.create({
             name: companyName,
             ownerName: 'Tally Admin',
