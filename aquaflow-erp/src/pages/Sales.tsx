@@ -266,6 +266,9 @@ export default function Sales() {
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                       <span className="text-xs font-display font-semibold text-muted-foreground">{r.invoiceNumber}</span>
+                      {r.tallyGuid && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-100 text-blue-800 border border-blue-200 shrink-0">Tally</span>
+                      )}
                     </div>
                     <p className="font-display font-semibold text-sm text-foreground truncate">{r.customerName}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{new Date(r.createdAt).toLocaleDateString("en-IN")} · {r.paymentType}</p>
@@ -305,6 +308,9 @@ export default function Sales() {
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
                   <span className="font-medium text-foreground">{r.invoiceNumber}</span>
+                  {r.tallyGuid && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800 border border-blue-200">Tally</span>
+                  )}
                 </div>
               ),
             },

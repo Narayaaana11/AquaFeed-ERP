@@ -14,6 +14,7 @@ export interface Warehouse {
   capacity?: number;
   status: string;
   isDefault: boolean;
+  tallyGuid?: string;
   createdAt: string;
 }
 

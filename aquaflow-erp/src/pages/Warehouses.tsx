@@ -147,7 +147,12 @@ export default function Warehouses() {
                     <WarehouseIcon className="w-5 h-5 text-brand" />
                   </div>
                   <div>
-                    <p className="font-display font-bold text-foreground">{wh.name}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-display font-bold text-foreground">{wh.name}</p>
+                      {wh.tallyGuid && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-100 text-blue-800 border border-blue-200 shrink-0">Tally</span>
+                      )}
+                    </div>
                     {wh.code && <p className="text-xs text-muted-foreground">{wh.code}</p>}
                   </div>
                 </div>

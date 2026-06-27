@@ -365,9 +365,14 @@ export default function Products() {
                   <div className="flex items-start gap-3 p-3">
                     <ProductImage product={p} />
                     <div className="flex-1 min-w-0">
-                      <p className="font-display font-semibold text-sm text-foreground leading-tight line-clamp-2">
-                        {p.name}
-                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-display font-semibold text-sm text-foreground leading-tight line-clamp-2">
+                          {p.name}
+                        </p>
+                        {p.tallyGuid && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-100 text-blue-800 border border-blue-200 shrink-0">Tally</span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{p.brand}</p>
                       <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-semibold ${getCatClass(p.category)}`}>
                         {p.category}
@@ -440,7 +445,12 @@ export default function Products() {
                         <div className="flex items-center gap-3">
                           <ProductImage product={p} />
                           <div>
-                            <p className="font-medium text-foreground">{p.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-medium text-foreground">{p.name}</p>
+                              {p.tallyGuid && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800 border border-blue-200">Tally</span>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground">{p.brand}</p>
                           </div>
                         </div>

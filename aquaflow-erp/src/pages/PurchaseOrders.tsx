@@ -138,7 +138,12 @@ export default function PurchaseOrders() {
             <div className="bg-surface rounded-xl border border-border shadow-sm p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-display font-semibold text-sm text-foreground font-mono">{r.poNumber}</p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="font-display font-semibold text-sm text-foreground font-mono">{r.poNumber}</p>
+                    {r.tallyGuid && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-100 text-blue-800 border border-blue-200 shrink-0">Tally</span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{r.supplierName}</p>
                   <p className="text-xs text-muted-foreground">{r.warehouse?.name || "—"} · {new Date(r.createdAt).toLocaleDateString("en-IN")}</p>
                 </div>
@@ -164,7 +169,12 @@ export default function PurchaseOrders() {
               key: "poNumber",
               header: "PO Number",
               cell: (r) => (
-                <span className="font-display font-bold text-foreground font-mono">{r.poNumber}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-display font-bold text-foreground font-mono">{r.poNumber}</span>
+                  {r.tallyGuid && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800 border border-blue-200">Tally</span>
+                  )}
+                </div>
               ),
             },
             {

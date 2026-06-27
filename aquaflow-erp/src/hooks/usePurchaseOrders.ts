@@ -23,6 +23,7 @@ export interface PurchaseOrder {
   receivedDate?: string;
   notes?: string;
   warehouse: { _id: string; name: string };
+  tallyGuid?: string;
   createdAt: string;
 }
 

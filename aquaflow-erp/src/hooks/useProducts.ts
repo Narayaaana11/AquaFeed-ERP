@@ -17,6 +17,7 @@ export interface Product {
   imageUrl?: string;
   isActive: boolean;
   stockStatus?: string;
+  tallyGuid?: string;
   createdAt: string;
 }
 

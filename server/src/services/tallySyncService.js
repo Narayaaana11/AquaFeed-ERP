@@ -274,9 +274,24 @@ async function syncTallyData(targetCompanyId = null) {
       try {
         const adminDb = baseConnection.client.db('admin');
         const dbList = await adminDb.admin().listDatabases();
+        
+        let filterCompanyName = null;
+        if (targetCompanyId) {
+          const filterCompany = await Company.findById(targetCompanyId);
+          if (filterCompany) {
+            filterCompanyName = filterCompany.name;
+          }
+        }
+        
         stagingDbs = dbList.databases
           .filter(d => d.name.startsWith('tallydb_'))
           .map(d => d.name);
+          
+        if (filterCompanyName) {
+          const targetDbName = 'tallydb_' + filterCompanyName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').trim().replace(/^_|_$/g, '').slice(0, 38).replace(/_$/, '');
+          console.log(`🎯 Manual sync trigger for company "${filterCompanyName}". Restricting staging DBs to: ${targetDbName}`);
+          stagingDbs = stagingDbs.filter(name => name === targetDbName);
+        }
       } catch (err) {
         console.warn('⚠️ Could not list MongoDB databases, using default schema name.', err.message);
       }

@@ -16,6 +16,7 @@ export interface Supplier {
   outstandingBalance: number;
   notes?: string;
   isActive: boolean;
+  tallyGuid?: string;
   createdAt: string;
 }
 

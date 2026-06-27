@@ -16,6 +16,7 @@ export interface Customer {
   outstandingBalance: number;
   isActive: boolean;
   notes?: string;
+  tallyGuid?: string;
   createdAt: string;
 }
 

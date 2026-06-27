@@ -237,7 +237,12 @@ export default function Suppliers() {
                     <Truck className="w-4 h-4 text-brand" />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-display font-semibold text-sm text-foreground truncate">{r.name}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-display font-semibold text-sm text-foreground truncate">{r.name}</p>
+                      {r.tallyGuid && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-100 text-blue-800 border border-blue-200 shrink-0">Tally</span>
+                      )}
+                    </div>
                     {r.contactPerson && <p className="text-xs text-muted-foreground">{r.contactPerson}</p>}
                   </div>
                 </div>
@@ -269,7 +274,12 @@ export default function Suppliers() {
                     <Truck className="w-4 h-4 text-brand" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">{r.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-medium text-foreground">{r.name}</p>
+                      {r.tallyGuid && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800 border border-blue-200">Tally</span>
+                      )}
+                    </div>
                     {r.contactPerson && <p className="text-xs text-muted-foreground">{r.contactPerson}</p>}
                   </div>
                 </div>
