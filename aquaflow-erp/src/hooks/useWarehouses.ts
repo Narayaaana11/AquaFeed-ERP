@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useCompany } from '@/context/CompanyContext';
 
 export interface Warehouse {
   _id: string;
@@ -19,10 +20,11 @@ export interface Warehouse {
 }
 
 export function useWarehouses() {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ['warehouses'],
+    queryKey: ['warehouses', activeCompanyId],
     queryFn: async () => {
-      const { data } = await api.get('/warehouses');
+      const { data } = await api.get('/warehouses', { params: { companyId: activeCompanyId } });
       return data.data as Warehouse[];
     },
     staleTime: 60000,

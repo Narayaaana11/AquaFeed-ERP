@@ -24,7 +24,11 @@ const protect = async (req, res, next) => {
     
     // Allow overriding the company context via query param for global filtering
     if (req.query.companyId) {
-      req.companyId = req.query.companyId;
+      if (req.query.companyId === 'all') {
+        req.companyId = { $exists: true };
+      } else {
+        req.companyId = req.query.companyId;
+      }
     } else {
       req.companyId = user.company._id;
     }

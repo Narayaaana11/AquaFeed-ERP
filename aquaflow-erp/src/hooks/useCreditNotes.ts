@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useCompany } from '@/context/CompanyContext';
 
 export interface CreditNote {
   _id: string;
@@ -23,10 +24,13 @@ export interface CreditNote {
 }
 
 export function useCreditNotes(params?: { customerId?: string }) {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ['credit-notes', params],
+    queryKey: ['credit-notes', params, activeCompanyId],
     queryFn: async () => {
-      const { data } = await api.get('/credit-notes', { params });
+      const { data } = await api.get('/credit-notes', { 
+        params: { ...params, companyId: activeCompanyId } 
+      });
       return data.data as CreditNote[];
     },
     staleTime: 30000,

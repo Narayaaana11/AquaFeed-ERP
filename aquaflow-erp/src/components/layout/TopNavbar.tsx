@@ -26,10 +26,9 @@ export function TopNavbar({ title, subtitle }: TopNavbarProps) {
       const res = await api.get("/settings/companies");
       if (res.data?.success && res.data.data) {
         setCompanies(res.data.data);
-        // If no active company is set, default to the first one or the user's company
+        // If no active company is set, default to 'all'
         if (!activeCompanyId && res.data.data.length > 0) {
-          const userCompany = res.data.data.find((c: any) => c.name === user?.company?.name);
-          setActiveCompanyId(userCompany?._id || res.data.data[0]._id);
+          setActiveCompanyId('all');
         }
       }
       return res.data;
@@ -86,12 +85,12 @@ export function TopNavbar({ title, subtitle }: TopNavbarProps) {
       {companies.length > 0 && (
         <div className="hidden sm:block mr-2">
           <select
-            value={activeCompanyId || ""}
+            value={activeCompanyId || "all"}
             onChange={(e) => setActiveCompanyId(e.target.value)}
             className="h-9 px-3 py-1 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand"
             title="Filter data by company"
           >
-            <option value="">All Companies</option>
+            <option value="all">All Companies</option>
             {companies.map((c) => (
               <option key={c._id} value={c._id}>
                 {c.name}

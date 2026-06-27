@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useCompany } from '@/context/CompanyContext';
 
 export interface Supplier {
   _id: string;
@@ -21,10 +22,13 @@ export interface Supplier {
 }
 
 export function useSuppliers(params?: { search?: string }) {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ['suppliers', params],
+    queryKey: ['suppliers', params, activeCompanyId],
     queryFn: async () => {
-      const { data } = await api.get('/suppliers', { params });
+      const { data } = await api.get('/suppliers', { 
+        params: { ...params, companyId: activeCompanyId } 
+      });
       return data.data as Supplier[];
     },
     staleTime: 30000,

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useCompany } from '@/context/CompanyContext';
 
 export interface Expense {
   _id: string;
@@ -17,10 +18,13 @@ export interface Expense {
 }
 
 export function useExpenses(params?: { search?: string; category?: string; status?: string; from?: string; to?: string }) {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ['expenses', params],
+    queryKey: ['expenses', params, activeCompanyId],
     queryFn: async () => {
-      const { data } = await api.get('/expenses', { params });
+      const { data } = await api.get('/expenses', { 
+        params: { ...params, companyId: activeCompanyId } 
+      });
       return { data: data.data as Expense[], total: data.total };
     },
     staleTime: 30000,

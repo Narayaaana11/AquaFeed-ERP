@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useCompany } from '@/context/CompanyContext';
 
 export interface POItem {
   product: string;
@@ -28,10 +29,13 @@ export interface PurchaseOrder {
 }
 
 export function usePurchaseOrders(params?: { search?: string; status?: string }) {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ['purchase-orders', params],
+    queryKey: ['purchase-orders', params, activeCompanyId],
     queryFn: async () => {
-      const { data } = await api.get('/purchase-orders', { params });
+      const { data } = await api.get('/purchase-orders', { 
+        params: { ...params, companyId: activeCompanyId } 
+      });
       return { data: data.data as PurchaseOrder[], total: data.total };
     },
     staleTime: 30000,

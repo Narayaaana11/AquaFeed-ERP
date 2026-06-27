@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useCompany } from '@/context/CompanyContext';
 
 export interface Customer {
   _id: string;
@@ -21,10 +22,13 @@ export interface Customer {
 }
 
 export function useCustomers(params?: { search?: string; type?: string }) {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ['customers', params],
+    queryKey: ['customers', params, activeCompanyId],
     queryFn: async () => {
-      const { data } = await api.get('/customers', { params });
+      const { data } = await api.get('/customers', { 
+        params: { ...params, companyId: activeCompanyId } 
+      });
       return data.data as Customer[];
     },
     staleTime: 30000,
@@ -76,10 +80,13 @@ export function useDeleteCustomer() {
 }
 
 export function useOverdueCustomers() {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ['customers', 'overdue'],
+    queryKey: ['customers', 'overdue', activeCompanyId],
     queryFn: async () => {
-      const { data } = await api.get('/customers/overdue');
+      const { data } = await api.get('/customers/overdue', {
+        params: { companyId: activeCompanyId }
+      });
       return data.data as Customer[];
     },
   });
