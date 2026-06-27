@@ -1,12 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useCompany } from '@/context/CompanyContext';
 
 export function useInventory(params?: { search?: string; stockStatus?: string }) {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ['inventory', params],
+    queryKey: ['inventory', params, activeCompanyId],
     queryFn: async () => {
-      const { data } = await api.get('/inventory', { params });
+      const { data } = await api.get('/inventory', { 
+        params: { ...params, companyId: activeCompanyId } 
+      });
       return data.data;
     },
     staleTime: 15000,
@@ -14,10 +18,13 @@ export function useInventory(params?: { search?: string; stockStatus?: string })
 }
 
 export function useStockAdjustments(params?: { productId?: string; page?: number }) {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ['inventory', 'adjustments', params],
+    queryKey: ['inventory', 'adjustments', params, activeCompanyId],
     queryFn: async () => {
-      const { data } = await api.get('/inventory/adjustments', { params });
+      const { data } = await api.get('/inventory/adjustments', { 
+        params: { ...params, companyId: activeCompanyId } 
+      });
       return { data: data.data, total: data.total };
     },
     staleTime: 30000,

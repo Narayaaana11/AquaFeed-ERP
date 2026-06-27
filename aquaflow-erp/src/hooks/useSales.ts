@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { openWhatsApp, getInvoiceMessage, getPaymentMessage } from '@/utils/whatsapp';
+import { useCompany } from '@/context/CompanyContext';
 
 export interface InvoiceItem {
   product: string;
@@ -39,10 +40,13 @@ export interface Invoice {
 }
 
 export function useSales(params?: { search?: string; status?: string; from?: string; to?: string; page?: number }) {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ['sales', params],
+    queryKey: ['sales', params, activeCompanyId],
     queryFn: async () => {
-      const { data } = await api.get('/sales', { params });
+      const { data } = await api.get('/sales', { 
+        params: { ...params, companyId: activeCompanyId } 
+      });
       return { data: data.data as Invoice[], total: data.total };
     },
     staleTime: 15000,

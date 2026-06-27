@@ -1,6 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
+const Company = require('../models/Company');
+
+// Get all companies (for global filter)
+router.get('/companies', protect, async (req, res) => {
+  try {
+    const companies = await Company.find().select('name _id').sort('name');
+    res.json({ success: true, data: companies });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch companies' });
+  }
+});
+
 const { roleGuard } = require('../middleware/roleGuard');
 const {
   getCompany, updateCompany, getUsers, createUser, updateUser, updateProfile, loadDemoData, clearCompanyData, syncTallyData

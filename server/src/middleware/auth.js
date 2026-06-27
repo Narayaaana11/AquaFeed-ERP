@@ -21,7 +21,14 @@ const protect = async (req, res, next) => {
     }
 
     req.user = user;
-    req.companyId = user.company._id;
+    
+    // Allow overriding the company context via query param for global filtering
+    if (req.query.companyId) {
+      req.companyId = req.query.companyId;
+    } else {
+      req.companyId = user.company._id;
+    }
+    
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Token invalid or expired.' });

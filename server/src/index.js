@@ -262,6 +262,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/credit-notes', creditNoteRoutes);
+app.use('/api/tally', require('./routes/tally'));
 
 // Serve React frontend only if the dist folder exists (self-hosted / same-server deploy).
 // When frontend is on Vercel and backend is on Render, dist won't exist — skip silently.

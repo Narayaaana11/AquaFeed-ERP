@@ -695,6 +695,12 @@ async function syncTallyData(targetCompanyId = null) {
     const duration = ((new Date() - stats.startTime) / 1000).toFixed(1);
     console.log(`✅ Tally sync completed in ${duration}s! Sync stats:`, stats);
 
+    // Emit event to all connected clients that sync is complete
+    const app = require('../index'); // Need to get app to access app.locals.io
+    if (app && app.locals && app.locals.io) {
+       app.locals.io.emit('TALLY_SYNC_COMPLETED', { stats, timestamp: new Date() });
+    }
+
     return {
       success: true,
       message: `Successfully synchronized Tally database.`,

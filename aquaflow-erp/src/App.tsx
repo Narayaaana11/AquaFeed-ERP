@@ -36,7 +36,8 @@ const queryClient = new QueryClient({
   },
 });
 
-// Protected layout wrapper that hosts the WebSocketProvider
+import { CompanyProvider } from "@/context/CompanyContext";
+
 const ProtectedLayout = () => {
   const isTokenValid = () => {
     const token = localStorage.getItem("token");
@@ -58,9 +59,11 @@ const ProtectedLayout = () => {
   };
 
   return isTokenValid() ? (
-    <WebSocketProvider>
-      <Outlet />
-    </WebSocketProvider>
+    <CompanyProvider>
+      <WebSocketProvider>
+        <Outlet />
+      </WebSocketProvider>
+    </CompanyProvider>
   ) : (
     <Navigate to="/login" replace />
   );

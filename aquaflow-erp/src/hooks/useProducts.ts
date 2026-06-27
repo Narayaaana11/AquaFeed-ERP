@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useCompany } from '@/context/CompanyContext';
 
 export interface Product {
   _id: string;
@@ -22,10 +23,13 @@ export interface Product {
 }
 
 export function useProducts(params?: { search?: string; brand?: string; stockStatus?: string }) {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ['products', params],
+    queryKey: ['products', params, activeCompanyId],
     queryFn: async () => {
-      const { data } = await api.get('/products', { params });
+      const { data } = await api.get('/products', { 
+        params: { ...params, companyId: activeCompanyId } 
+      });
       return data.data as Product[];
     },
     staleTime: 30000,
@@ -33,10 +37,13 @@ export function useProducts(params?: { search?: string; brand?: string; stockSta
 }
 
 export function useLowStockProducts() {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ['products', 'low-stock'],
+    queryKey: ['products', 'low-stock', activeCompanyId],
     queryFn: async () => {
-      const { data } = await api.get('/products/low-stock');
+      const { data } = await api.get('/products/low-stock', {
+        params: { companyId: activeCompanyId }
+      });
       return data.data as Product[];
     },
     staleTime: 60000,
