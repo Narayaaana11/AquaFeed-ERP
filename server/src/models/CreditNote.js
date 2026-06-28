@@ -69,6 +69,10 @@ const creditNoteSchema = new mongoose.Schema(
       ref: 'Company',
       required: true,
     },
+    tallyGuid: {
+      type: String,
+      sparse: true,
+    },
   },
   { timestamps: true }
 );
@@ -76,5 +80,6 @@ const creditNoteSchema = new mongoose.Schema(
 creditNoteSchema.index({ company: 1, creditNoteNumber: 1 }, { unique: true });
 creditNoteSchema.index({ company: 1, customer: 1 });
 creditNoteSchema.index({ company: 1, originalInvoice: 1 });
+creditNoteSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('CreditNote', creditNoteSchema);

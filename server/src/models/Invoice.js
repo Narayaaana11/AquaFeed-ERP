@@ -83,6 +83,7 @@ const invoiceSchema = new mongoose.Schema(
       amount: { type: Number, required: true },
       paymentType: { type: String, enum: ['Cash', 'UPI', 'Cheque', 'Bank Transfer', 'Credit'], required: true },
       referenceNumber: { type: String, default: '' },
+      tallyReceiptGuid: { type: String, sparse: true },
       date: { type: Date, default: Date.now }
     }],
     paymentType: {

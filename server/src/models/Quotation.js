@@ -25,11 +25,13 @@ const quotationSchema = new mongoose.Schema({
   total: { type: Number, required: true, min: 0 },
   status: { type: String, enum: ['Draft', 'Sent', 'Accepted', 'Rejected', 'Converted'], default: 'Draft' },
   validUntil: { type: Date },
-  notes: { type: String }
+  notes: { type: String },
+  tallyGuid: { type: String, sparse: true }
 }, {
   timestamps: true
 });
 
 quotationSchema.index({ company: 1, quotationNumber: 1 }, { unique: true });
+quotationSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Quotation', quotationSchema);

@@ -70,8 +70,11 @@ The system is divided into multiple interconnected modules:
 ### Step 5: Tally Synchronization
 If Tally integration is enabled (`TALLY_ENABLED='true'` in `.env`):
 1. The backend initializes `tallySyncService` on startup.
-2. It runs scheduled tasks to pull or push financial data (Ledgers, Vouchers, Inventory items) between the MongoDB database and the local Tally Prime software.
-3. The standalone `tally-database-loader-utility` acts as a heavy-lifting tool for initial bulk imports or structural database syncing using predefined SQL schemas or JSON configs.
+2. It runs scheduled tasks to pull or push financial data between the MongoDB database and the local Tally Prime software.
+3. The standalone `tally-database-loader-utility` acts as a heavy-lifting tool for initial bulk imports from Tally to a staging DB.
+4. `tallySyncService.js` actively syncs the following from the staging DB into the ERP collections:
+   - **Masters**: Warehouses, Customers, Suppliers, Products.
+   - **Vouchers**: Sales (Invoices), Purchase Orders, Receipt Vouchers (automatically applying payments to open invoices), Purchase Bills (updating POs to 'Received' or creating direct bills), Credit Notes (sales returns), and Sales Orders (syncing as Quotations).
 
 ### Step 6: Deployment & Serving
 - In a production environment where both are hosted on the same server, the Express backend serves the built React static files from the `aquaflow-erp/dist` directory.

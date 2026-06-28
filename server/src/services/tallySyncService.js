@@ -8,6 +8,8 @@ const Inventory = require('../models/Inventory');
 const Invoice = require('../models/Invoice');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const User = require('../models/User');
+const CreditNote = require('../models/CreditNote');
+const Quotation = require('../models/Quotation');
 
 let isSyncRunning = false;
 let syncIntervalId = null;
@@ -177,7 +179,17 @@ async function executeQuery(connection, queryStr, params = []) {
       return await connection.collection('mst_stock_item').find({}).toArray();
     }
     
-    // 5. Sales Vouchers query
+    // 5. Sales Order Vouchers query (must be before Sales)
+    if (normalized.includes('Sales Order')) {
+      let soVchTypes = await connection.collection('mst_vouchertype').find({ parent: 'Sales Order' }).toArray();
+      let soVchNames = soVchTypes.map(vt => vt.name);
+      soVchNames.push('Sales Order');
+      return await connection.collection('trn_voucher').find({
+        voucher_type: { $in: soVchNames }
+      }).toArray();
+    }
+
+    // 6. Sales Vouchers query
     if (normalized.includes('Sales')) {
       let salesVchTypes = await connection.collection('mst_vouchertype').find({ parent: 'Sales' }).toArray();
       let salesVchNames = salesVchTypes.map(vt => vt.name);
@@ -187,13 +199,43 @@ async function executeQuery(connection, queryStr, params = []) {
       }).toArray();
     }
     
-    // 6. Purchase Order Vouchers query
+    // 7. Purchase Order Vouchers query (must be before Purchase)
     if (normalized.includes('Purchase Order')) {
       let poVchTypes = await connection.collection('mst_vouchertype').find({ parent: 'Purchase Order' }).toArray();
       let poVchNames = poVchTypes.map(vt => vt.name);
       poVchNames.push('Purchase Order');
       return await connection.collection('trn_voucher').find({
         voucher_type: { $in: poVchNames }
+      }).toArray();
+    }
+
+    // 8. Purchase Vouchers (Bills) query
+    if (normalized.includes('Purchase')) {
+      let purchaseVchTypes = await connection.collection('mst_vouchertype').find({ parent: 'Purchase' }).toArray();
+      let purchaseVchNames = purchaseVchTypes.map(vt => vt.name);
+      purchaseVchNames.push('Purchase');
+      return await connection.collection('trn_voucher').find({
+        voucher_type: { $in: purchaseVchNames }
+      }).toArray();
+    }
+
+    // 9. Receipt Vouchers query
+    if (normalized.includes('Receipt')) {
+      let receiptVchTypes = await connection.collection('mst_vouchertype').find({ parent: 'Receipt' }).toArray();
+      let receiptVchNames = receiptVchTypes.map(vt => vt.name);
+      receiptVchNames.push('Receipt');
+      return await connection.collection('trn_voucher').find({
+        voucher_type: { $in: receiptVchNames }
+      }).toArray();
+    }
+
+    // 10. Credit Note Vouchers query
+    if (normalized.includes('Credit Note')) {
+      let cnVchTypes = await connection.collection('mst_vouchertype').find({ parent: 'Credit Note' }).toArray();
+      let cnVchNames = cnVchTypes.map(vt => vt.name);
+      cnVchNames.push('Credit Note');
+      return await connection.collection('trn_voucher').find({
+        voucher_type: { $in: cnVchNames }
       }).toArray();
     }
     
@@ -280,6 +322,10 @@ async function syncTallyData(targetCompanyId = null) {
     products: 0,
     invoices: 0,
     purchaseOrders: 0,
+    receiptsApplied: 0,
+    purchaseBills: 0,
+    creditNotes: 0,
+    quotations: 0,
     startTime: new Date()
   };
 
@@ -676,6 +722,330 @@ async function syncTallyData(targetCompanyId = null) {
         { upsert: true }
       );
       stats.purchaseOrders++;
+    }
+
+    // 9. Sync Receipt Vouchers
+    console.log('🔄 Syncing Receipt Vouchers...');
+    const receiptVouchers = await executeQuery(
+      connection,
+      `SELECT guid, date, voucher_type, voucher_number, reference_number, reference_date, narration, party_name 
+       FROM trn_voucher 
+       WHERE voucher_type = 'Receipt' OR voucher_type IN (SELECT name FROM mst_vouchertype WHERE parent = 'Receipt')`
+    );
+
+    for (const v of receiptVouchers) {
+      try {
+        const accRows = await executeQuery(connection, 'SELECT ledger, amount FROM trn_accounting WHERE guid = ?', [v.guid]);
+        let amountReceived = 0;
+        let paymentType = 'Bank Transfer'; // Default
+        let partyName = v.party_name;
+
+        for (const acc of accRows) {
+          const accAmount = Math.abs(parseFloat(acc.amount) || 0);
+          const ledgerUpper = acc.ledger.toUpperCase();
+          if (acc.ledger === partyName) {
+            amountReceived = accAmount;
+          }
+          if (ledgerUpper.includes('CASH')) paymentType = 'Cash';
+          else if (ledgerUpper.includes('BANK') || ledgerUpper.includes('SBI') || ledgerUpper.includes('HDFC') || ledgerUpper.includes('ICICI')) paymentType = 'Bank Transfer';
+          else if (ledgerUpper.includes('UPI')) paymentType = 'UPI';
+        }
+
+        if (amountReceived <= 0 || !partyName) {
+          console.log(`⚠️ Receipt voucher ${v.guid} — amount is 0 or no party name, skipped`);
+          continue;
+        }
+
+        const dbCustomer = await Customer.findOne({ name: partyName, company: companyId });
+        if (!dbCustomer) {
+          console.log(`⚠️ Receipt voucher ${v.guid} for "${partyName}" — no matching customer found, skipped`);
+          continue;
+        }
+
+        let remainingToApply = amountReceived;
+        const pendingInvoices = await Invoice.find({
+          customer: dbCustomer._id,
+          company: companyId,
+          status: { $in: ['Credit', 'Overdue', 'Pending'] }
+        }).sort({ dueDate: 1 });
+
+        if (pendingInvoices.length === 0) {
+          console.log(`⚠️ Receipt voucher ${v.guid} for "${partyName}" — no unpaid invoice found, skipped`);
+          continue;
+        }
+
+        for (const inv of pendingInvoices) {
+          if (remainingToApply <= 0) break;
+          
+          // Check if already applied
+          if (inv.payments && inv.payments.some(p => p.tallyReceiptGuid === v.guid)) {
+            console.log(`⚠️ Receipt voucher ${v.guid} already applied to invoice ${inv.invoiceNumber}, skipped`);
+            remainingToApply = 0; // Prevent applying to other invoices if it was already applied
+            break; 
+          }
+
+          const invRemainingBalance = inv.total - inv.paidAmount;
+          if (invRemainingBalance <= 0) continue;
+
+          const amountToApply = Math.min(remainingToApply, invRemainingBalance);
+          inv.paidAmount += amountToApply;
+          remainingToApply -= amountToApply;
+
+          inv.payments.push({
+            amount: amountToApply,
+            paymentType,
+            referenceNumber: v.reference_number || v.voucher_number || '',
+            tallyReceiptGuid: v.guid,
+            date: new Date(v.date)
+          });
+
+          if (inv.paidAmount >= inv.total) {
+            inv.status = 'Paid';
+            inv.paymentType = inv.payments.length > 1 ? 'Split' : paymentType;
+          }
+
+          await inv.save();
+          stats.receiptsApplied++;
+        }
+      } catch (err) {
+        console.error(`Error processing Receipt voucher ${v.guid}:`, err.message);
+      }
+    }
+
+    // 10. Sync Purchase Bills
+    console.log('🔄 Syncing Purchase Bills...');
+    const purchaseVouchers = await executeQuery(
+      connection,
+      `SELECT guid, date, voucher_type, voucher_number, reference_number, reference_date, narration, party_name 
+       FROM trn_voucher 
+       WHERE voucher_type = 'Purchase' OR voucher_type IN (SELECT name FROM mst_vouchertype WHERE parent = 'Purchase')`
+    );
+
+    for (const v of purchaseVouchers) {
+      try {
+        let dbSupplier = await Supplier.findOne({ name: v.party_name, company: companyId });
+        if (!dbSupplier) {
+          dbSupplier = await Supplier.create({ name: v.party_name, isActive: true, company: companyId });
+        }
+
+        const poItemsRows = await executeQuery(connection, 'SELECT item, quantity, rate, amount, discount_amount FROM trn_inventory WHERE guid = ?', [v.guid]);
+        const items = [];
+        let subtotal = 0;
+
+        for (const itemRow of poItemsRows) {
+          let dbProduct = await Product.findOne({ name: itemRow.item, company: companyId });
+          if (!dbProduct) {
+            dbProduct = await Product.create({ name: itemRow.item, brand: 'Tally', price: Math.abs(parseFloat(itemRow.rate) || 0), weight: 1, company: companyId });
+          }
+          const qty = Math.abs(parseFloat(itemRow.quantity) || 0);
+          const unitCost = Math.abs(parseFloat(itemRow.rate) || 0);
+          const lineTotal = Math.abs(parseFloat(itemRow.amount) || 0);
+          subtotal += lineTotal;
+          items.push({ product: dbProduct._id, productName: dbProduct.name, quantity: qty, unitCost, lineTotal });
+        }
+
+        let existingPO = null;
+        if (v.reference_number) {
+          existingPO = await PurchaseOrder.findOne({ poNumber: v.reference_number, company: companyId });
+        }
+        if (!existingPO) {
+          existingPO = await PurchaseOrder.findOne({ 
+            supplier: dbSupplier._id, 
+            totalAmount: subtotal, 
+            company: companyId,
+            status: { $nin: ['Received', 'Cancelled'] } 
+          });
+        }
+
+        if (existingPO) {
+          existingPO.status = 'Received';
+          existingPO.tallyGuid = v.guid;
+          existingPO.receivedDate = new Date(v.date);
+          await existingPO.save();
+        } else {
+          await PurchaseOrder.findOneAndUpdate(
+            { tallyGuid: v.guid, company: companyId },
+            {
+              $set: {
+                poNumber: v.voucher_number || `PB-${v.guid.slice(0, 8).toUpperCase()}`,
+                supplier: dbSupplier._id,
+                supplierName: dbSupplier.name,
+                items,
+                subtotal,
+                totalAmount: subtotal,
+                status: 'Received',
+                expectedDate: new Date(v.date),
+                receivedDate: new Date(v.date),
+                notes: v.narration || '',
+                warehouse: defaultWarehouse ? defaultWarehouse._id : null,
+                company: companyId
+              }
+            },
+            { upsert: true }
+          );
+        }
+        stats.purchaseBills++;
+      } catch (err) {
+        console.error(`Error processing Purchase Bill voucher ${v.guid}:`, err.message);
+      }
+    }
+
+    // 11. Sync Credit Note Vouchers
+    console.log('🔄 Syncing Credit Notes...');
+    const cnVouchers = await executeQuery(
+      connection,
+      `SELECT guid, date, voucher_type, voucher_number, reference_number, reference_date, narration, party_name 
+       FROM trn_voucher 
+       WHERE voucher_type = 'Credit Note' OR voucher_type IN (SELECT name FROM mst_vouchertype WHERE parent = 'Credit Note')`
+    );
+
+    for (const v of cnVouchers) {
+      try {
+        const dbCustomer = await Customer.findOne({ name: v.party_name, company: companyId });
+        if (!dbCustomer) continue;
+
+        const cnItemsRows = await executeQuery(connection, 'SELECT item, quantity, rate, amount, discount_amount FROM trn_inventory WHERE guid = ?', [v.guid]);
+        const items = [];
+        let subtotal = 0;
+
+        for (const itemRow of cnItemsRows) {
+          let dbProduct = await Product.findOne({ name: itemRow.item, company: companyId });
+          if (!dbProduct) continue;
+          const qty = Math.abs(parseFloat(itemRow.quantity) || 0);
+          const unitPrice = Math.abs(parseFloat(itemRow.rate) || 0);
+          const lineTotal = Math.abs(parseFloat(itemRow.amount) || 0);
+          subtotal += lineTotal;
+          items.push({ product: dbProduct._id, productName: dbProduct.name, quantity: qty, unitPrice, lineTotal });
+        }
+
+        const accRows = await executeQuery(connection, 'SELECT ledger, amount FROM trn_accounting WHERE guid = ?', [v.guid]);
+        let totalAmount = subtotal;
+        for (const acc of accRows) {
+          if (acc.ledger === v.party_name) {
+            totalAmount = Math.abs(parseFloat(acc.amount) || 0);
+          }
+        }
+
+        let origInvoice = null;
+        if (v.reference_number) {
+          origInvoice = await Invoice.findOne({ invoiceNumber: v.reference_number, company: companyId });
+        }
+        if (!origInvoice) {
+          origInvoice = await Invoice.findOne({ customer: dbCustomer._id, company: companyId }).sort({ createdAt: -1 });
+        }
+
+        if (origInvoice) {
+          await CreditNote.findOneAndUpdate(
+            { tallyGuid: v.guid, company: companyId },
+            {
+              $set: {
+                creditNoteNumber: v.voucher_number || `CN-${v.guid.slice(0, 8).toUpperCase()}`,
+                originalInvoice: origInvoice._id,
+                originalInvoiceNumber: origInvoice.invoiceNumber,
+                customer: dbCustomer._id,
+                customerName: dbCustomer.name,
+                items,
+                reason: v.narration || 'Synced from Tally',
+                totalAmount,
+                status: 'Issued',
+                warehouse: defaultWarehouse ? defaultWarehouse._id : null,
+                company: companyId
+              }
+            },
+            { upsert: true }
+          );
+          stats.creditNotes++;
+        } else {
+          console.log(`⚠️ Credit Note voucher ${v.guid} for "${v.party_name}" — no original invoice found, skipped`);
+        }
+      } catch (err) {
+        console.error(`Error processing Credit Note voucher ${v.guid}:`, err.message);
+      }
+    }
+
+    // 12. Sync Sales Order Vouchers -> Quotations
+    console.log('🔄 Syncing Sales Orders...');
+    const soVouchers = await executeQuery(
+      connection,
+      `SELECT guid, date, voucher_type, voucher_number, reference_number, reference_date, narration, party_name 
+       FROM trn_voucher 
+       WHERE voucher_type = 'Sales Order' OR voucher_type IN (SELECT name FROM mst_vouchertype WHERE parent = 'Sales Order')`
+    );
+
+    for (const v of soVouchers) {
+      try {
+        let dbCustomer = await Customer.findOne({ name: v.party_name, company: companyId });
+        if (!dbCustomer) {
+          dbCustomer = await Customer.create({ name: v.party_name, isActive: true, company: companyId });
+        }
+
+        const soItemsRows = await executeQuery(connection, 'SELECT item, quantity, rate, amount, discount_amount FROM trn_inventory WHERE guid = ?', [v.guid]);
+        const items = [];
+        let subtotal = 0;
+
+        for (const itemRow of soItemsRows) {
+          let dbProduct = await Product.findOne({ name: itemRow.item, company: companyId });
+          if (!dbProduct) {
+            dbProduct = await Product.create({ name: itemRow.item, brand: 'Tally', price: Math.abs(parseFloat(itemRow.rate) || 0), weight: 1, company: companyId });
+          }
+          const qty = Math.abs(parseFloat(itemRow.quantity) || 0);
+          const unitPrice = Math.abs(parseFloat(itemRow.rate) || 0);
+          const discountVal = Math.abs(parseFloat(itemRow.discount_amount) || 0);
+          const lineTotal = Math.abs(parseFloat(itemRow.amount) || 0);
+          subtotal += lineTotal;
+          items.push({ 
+            product: dbProduct._id, 
+            productName: dbProduct.name, 
+            quantity: qty, 
+            unitPrice, 
+            discount: discountVal > 0 ? Math.round((discountVal / (qty * unitPrice)) * 100) : 0,
+            lineTotal 
+          });
+        }
+
+        const accRows = await executeQuery(connection, 'SELECT ledger, amount FROM trn_accounting WHERE guid = ?', [v.guid]);
+        let totalAmount = subtotal;
+        let gstAmount = 0;
+        for (const acc of accRows) {
+          const accAmount = Math.abs(parseFloat(acc.amount) || 0);
+          if (acc.ledger === v.party_name) {
+            totalAmount = accAmount;
+          }
+          const ledgerUpper = acc.ledger.toUpperCase();
+          if (ledgerUpper.includes('CGST') || ledgerUpper.includes('SGST') || ledgerUpper.includes('IGST') || ledgerUpper.includes('GST')) {
+            gstAmount += accAmount;
+          }
+        }
+        
+        if (totalAmount === 0 || totalAmount === subtotal) {
+          totalAmount = subtotal + gstAmount;
+        }
+        const gstRate = subtotal > 0 ? Math.round((gstAmount / subtotal) * 100) : 5;
+
+        await Quotation.findOneAndUpdate(
+          { tallyGuid: v.guid, company: companyId },
+          {
+            $set: {
+              quotationNumber: v.voucher_number || `SO-${v.guid.slice(0, 8).toUpperCase()}`,
+              customer: dbCustomer._id,
+              customerName: dbCustomer.name,
+              items,
+              subtotal,
+              gstRate,
+              gstAmount,
+              total: totalAmount,
+              status: 'Sent',
+              validUntil: new Date(new Date(v.date).getTime() + 30 * 24 * 60 * 60 * 1000), // +30 days
+              notes: v.narration || '',
+              company: companyId
+            }
+          },
+          { upsert: true }
+        );
+        stats.quotations++;
+      } catch (err) {
+        console.error(`Error processing Sales Order voucher ${v.guid}:`, err.message);
+      }
     }
     } // End of stagingDbs loop
 
