@@ -24,6 +24,10 @@ import {
   useCustomerOutstanding,
   exportCSV,
 } from "@/hooks/useReports";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataTable } from "@/components/ui/data-table";
+import { usePaymentHistory } from "@/hooks/useSales";
+import { Search } from "lucide-react";
 
 const COLORS = ["#14b8a6", "#0d9488", "#0f766e", "#115e59", "#134e4a"];
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -37,6 +41,10 @@ export default function Reports() {
   const { data: expenseData, isLoading: isExpenseLoading } = useExpenseBreakdown();
   const { data: creditDataRaw, isLoading: isCreditLoading } = useCustomerOutstanding();
 
+  const [paymentSearch, setPaymentSearch] = useState("");
+  const { data: paymentData, isLoading: isPaymentLoading } = usePaymentHistory({ search: paymentSearch || undefined });
+  const paymentHistory = paymentData?.data || [];
+
   // Format sales trend for charts
   const monthlySalesData = (trendData || []).map((item: any) => {
     const monthName = item._id.day 
@@ -46,8 +54,17 @@ export default function Reports() {
       month: monthName,
       sales: item.sales || 0,
       expenses: item.expenses || 0,
+      gstAmount: item.gstAmount || 0,
+      cgstAmount: item.cgstAmount || 0,
+      sgstAmount: item.sgstAmount || 0,
+      igstAmount: item.igstAmount || 0,
     };
   });
+
+  const totalGst = monthlySalesData.reduce((sum, m) => sum + m.gstAmount, 0);
+  const totalCgst = monthlySalesData.reduce((sum, m) => sum + m.cgstAmount, 0);
+  const totalSgst = monthlySalesData.reduce((sum, m) => sum + m.sgstAmount, 0);
+  const totalIgst = monthlySalesData.reduce((sum, m) => sum + m.igstAmount, 0);
 
   // If no trend data, provide empty default list
   const totalSales = monthlySalesData.reduce((sum, m) => sum + m.sales, 0);
@@ -128,7 +145,16 @@ export default function Reports() {
         }
       />
 
-      {/* Date Range Filter */}
+      <Tabs defaultValue="overview" className="w-full">
+        <div className="flex items-center mb-6">
+          <TabsList>
+            <TabsTrigger value="overview">Overview & Analytics</TabsTrigger>
+            <TabsTrigger value="payment-history">Payment History</TabsTrigger>
+          </TabsList>
+        </div>
+        
+        <TabsContent value="overview" className="mt-0">
+          {/* Date Range Filter */}
       <div className="flex gap-2 mb-6">
         {[
           { value: "3months", label: "Last 3 Months" },
@@ -430,6 +456,108 @@ export default function Reports() {
           </div>
         )}
       </div>
+
+      {/* GST Summary */}
+      <div className="bg-surface rounded-xl border border-border shadow-card p-5 mt-4">
+        <p className="font-display font-semibold text-foreground mb-4">
+          GST Summary
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="p-3 bg-secondary/50 rounded-lg border border-border">
+            <p className="text-xs text-muted-foreground font-medium mb-1">Total GST</p>
+            <p className="font-display font-bold text-foreground">₹{totalGst.toLocaleString("en-IN")}</p>
+          </div>
+          <div className="p-3 bg-secondary/50 rounded-lg border border-border">
+            <p className="text-xs text-muted-foreground font-medium mb-1">Total CGST</p>
+            <p className="font-display font-bold text-foreground">₹{totalCgst.toLocaleString("en-IN")}</p>
+          </div>
+          <div className="p-3 bg-secondary/50 rounded-lg border border-border">
+            <p className="text-xs text-muted-foreground font-medium mb-1">Total SGST</p>
+            <p className="font-display font-bold text-foreground">₹{totalSgst.toLocaleString("en-IN")}</p>
+          </div>
+          <div className="p-3 bg-secondary/50 rounded-lg border border-border">
+            <p className="text-xs text-muted-foreground font-medium mb-1">Total IGST</p>
+            <p className="font-display font-bold text-foreground">₹{totalIgst.toLocaleString("en-IN")}</p>
+          </div>
+        </div>
+      </div>
+        </TabsContent>
+        <TabsContent value="payment-history" className="mt-0 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-surface flex-1 max-w-sm">
+              <Search className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search by invoice or customer..."
+                value={paymentSearch}
+                onChange={(e) => setPaymentSearch(e.target.value)}
+                className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground text-foreground text-sm"
+              />
+            </div>
+          </div>
+          
+          {isPaymentLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 rounded-full border-4 border-brand/20 border-t-brand animate-spin" />
+            </div>
+          ) : paymentHistory.length === 0 ? (
+            <div className="bg-surface rounded-2xl border border-border p-10 flex flex-col items-center text-center">
+              <p className="text-muted-foreground text-sm">No payment history found.</p>
+            </div>
+          ) : (
+            <DataTable
+              data={paymentHistory}
+              columns={[
+                {
+                  key: "date",
+                  header: "Date",
+                  cell: (r) => <span className="text-sm text-foreground">{new Date(r.date).toLocaleDateString("en-IN")}</span>,
+                },
+                {
+                  key: "invoiceNumber",
+                  header: "Invoice",
+                  cell: (r) => <span className="text-sm font-medium">{r.invoiceNumber}</span>,
+                },
+                {
+                  key: "customerName",
+                  header: "Customer",
+                  cell: (r) => <span className="text-sm text-foreground">{r.customerName}</span>,
+                },
+                {
+                  key: "amount",
+                  header: "Amount",
+                  cell: (r) => <span className="font-display font-semibold text-brand">₹{r.amount.toLocaleString("en-IN")}</span>,
+                },
+                {
+                  key: "paymentType",
+                  header: "Payment Method",
+                  cell: (r) => <span className="text-sm text-foreground">{r.paymentType}</span>,
+                },
+                {
+                  key: "referenceNumber",
+                  header: "Reference",
+                  cell: (r) => <span className="text-xs text-muted-foreground">{r.referenceNumber || "-"}</span>,
+                },
+              ]}
+              mobileCard={(r) => (
+                <div className="bg-surface rounded-xl border border-border shadow-sm p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="text-sm font-display font-semibold text-foreground">{r.invoiceNumber}</p>
+                      <p className="text-xs text-muted-foreground">{r.customerName}</p>
+                    </div>
+                    <span className="font-display font-semibold text-brand text-sm">₹{r.amount.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-muted-foreground pt-2 border-t border-border/50">
+                    <span>{new Date(r.date).toLocaleDateString("en-IN")} · {r.paymentType}</span>
+                    <span>{r.referenceNumber ? `Ref: ${r.referenceNumber}` : ''}</span>
+                  </div>
+                </div>
+              )}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
     </AppLayout>
   );
 }

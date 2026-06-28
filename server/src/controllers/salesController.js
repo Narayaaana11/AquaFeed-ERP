@@ -6,6 +6,7 @@ const Company = require('../models/Company');
 const StockAdjustment = require('../models/StockAdjustment');
 const Warehouse = require('../models/Warehouse');
 const Inventory = require('../models/Inventory');
+const { calculateGstSplit } = require('../utils/gstCalculator');
 const { emitInvoiceCreated, emitInvoiceUpdated, emitInvoiceDeleted, emitInvoicePaid, emitDashboardUpdate, emitLowStockAlert } = require('../utils/websocket');
 
 // Generate next invoice number
@@ -137,6 +138,7 @@ const createInvoice = async (req, res, next) => {
       lineItems.push({
         product: product._id,
         productName: product.name,
+        hsnCode: product.hsnCode || '',
         quantity: item.quantity,
         unitPrice: item.unitPrice || product.price,
         discount: item.discount || 0,
@@ -145,6 +147,7 @@ const createInvoice = async (req, res, next) => {
     }
 
     const gstAmount = Math.round(subtotal * (invoiceGstRate / 100));
+    const { cgstAmount, sgstAmount, igstAmount } = calculateGstSplit(company.state, customer.state, gstAmount);
     const total = subtotal + gstAmount;
 
     // Determine the actual paid amount and credit amount
@@ -188,6 +191,9 @@ const createInvoice = async (req, res, next) => {
       subtotal,
       gstRate: invoiceGstRate,
       gstAmount,
+      cgstAmount,
+      sgstAmount,
+      igstAmount,
       total,
       paidAmount: initialPaidAmount,
       payments,
@@ -330,7 +336,7 @@ const deleteInvoice = async (req, res, next) => {
 // POST /api/sales/:id/payments
 const addPayment = async (req, res, next) => {
   try {
-    const { amount, paymentType } = req.body;
+    const { amount, paymentType, referenceNumber } = req.body;
     const invoice = await Invoice.findOne({ _id: req.params.id, company: req.companyId });
     if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found.' });
 
@@ -342,7 +348,7 @@ const addPayment = async (req, res, next) => {
     }
 
     invoice.paidAmount += amount;
-    invoice.payments.push({ amount, paymentType });
+    invoice.payments.push({ amount, paymentType, referenceNumber });
     
     if (invoice.paidAmount >= invoice.total) {
       invoice.status = 'Paid';
@@ -374,7 +380,7 @@ const updateInvoice = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const invoice = await Invoice.findOne({ _id: req.params.id, company: req.companyId }).session(session);
+    const invoice = await Invoice.findOne({ _id: req.params.id, company: req.companyId }).populate('customer').session(session);
     if (!invoice) {
       await session.abortTransaction();
       session.endSession();
@@ -443,6 +449,7 @@ const updateInvoice = async (req, res, next) => {
       lineItems.push({
         product: product._id,
         productName: product.name,
+        hsnCode: product.hsnCode || '',
         quantity: item.quantity,
         unitPrice: item.unitPrice || product.price,
         discount: item.discount || 0,
@@ -451,6 +458,7 @@ const updateInvoice = async (req, res, next) => {
     }
 
     const gstAmount = Math.round(subtotal * (invoiceGstRate / 100));
+    const { cgstAmount, sgstAmount, igstAmount } = calculateGstSplit(company.state, invoice.customer.state, gstAmount);
     const total = subtotal + gstAmount;
 
     // 3. Deduct stock for new line items
@@ -486,6 +494,9 @@ const updateInvoice = async (req, res, next) => {
     invoice.subtotal = subtotal;
     invoice.gstRate = invoiceGstRate;
     invoice.gstAmount = gstAmount;
+    invoice.cgstAmount = cgstAmount;
+    invoice.sgstAmount = sgstAmount;
+    invoice.igstAmount = igstAmount;
     invoice.total = total;
     invoice.warehouse = targetWarehouseId;
     if (notes !== undefined) invoice.notes = notes;
@@ -508,5 +519,61 @@ const updateInvoice = async (req, res, next) => {
   }
 };
 
-module.exports = { getInvoices, getInvoice, createInvoice, updateInvoice, updateInvoiceStatus, deleteInvoice, addPayment };
+// GET /api/sales/payments/history
+const getPaymentHistory = async (req, res, next) => {
+  try {
+    const { search, page = 1, limit = 50, from, to } = req.query;
+    
+    const matchStage = { company: new mongoose.Types.ObjectId(req.companyId) };
+    if (search) {
+      matchStage.$or = [
+        { invoiceNumber: { $regex: search, $options: 'i' } },
+        { customerName: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // Aggregation pipeline to unwind payments
+    const pipeline = [
+      { $match: matchStage },
+      { $unwind: "$payments" }
+    ];
+
+    if (from || to) {
+      const dateMatch = {};
+      if (from) dateMatch.$gte = new Date(from);
+      if (to) dateMatch.$lte = new Date(to + 'T23:59:59.999Z');
+      pipeline.push({ $match: { "payments.date": dateMatch } });
+    }
+
+    pipeline.push(
+      { $sort: { "payments.date": -1 } },
+      {
+        $project: {
+          invoiceId: "$_id",
+          invoiceNumber: 1,
+          customerName: 1,
+          amount: "$payments.amount",
+          paymentType: "$payments.paymentType",
+          referenceNumber: "$payments.referenceNumber",
+          date: "$payments.date"
+        }
+      }
+    );
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const countPipeline = [...pipeline, { $count: "total" }];
+    const totalResult = await Invoice.aggregate(countPipeline);
+    const total = totalResult.length > 0 ? totalResult[0].total : 0;
+
+    const dataPipeline = [...pipeline, { $skip: skip }, { $limit: parseInt(limit) }];
+    const payments = await Invoice.aggregate(dataPipeline);
+
+    res.json({ success: true, data: payments, total });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getInvoices, getInvoice, createInvoice, updateInvoice, updateInvoiceStatus, deleteInvoice, addPayment, getPaymentHistory };
 

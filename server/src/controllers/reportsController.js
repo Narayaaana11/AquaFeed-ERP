@@ -136,6 +136,10 @@ const getSalesTrend = async (req, res, next) => {
           _id: groupBy,
           sales: { $sum: '$total' },
           count: { $sum: 1 },
+          gstAmount: { $sum: '$gstAmount' },
+          cgstAmount: { $sum: '$cgstAmount' },
+          sgstAmount: { $sum: '$sgstAmount' },
+          igstAmount: { $sum: '$igstAmount' },
         },
       },
     ]);
@@ -170,6 +174,10 @@ const getSalesTrend = async (req, res, next) => {
       mergedMap[key] = {
         _id: item._id,
         sales: item.sales,
+        gstAmount: item.gstAmount || 0,
+        cgstAmount: item.cgstAmount || 0,
+        sgstAmount: item.sgstAmount || 0,
+        igstAmount: item.igstAmount || 0,
         expenses: 0
       };
     });
@@ -180,6 +188,10 @@ const getSalesTrend = async (req, res, next) => {
         mergedMap[key] = {
           _id: item._id,
           sales: 0,
+          gstAmount: 0,
+          cgstAmount: 0,
+          sgstAmount: 0,
+          igstAmount: 0,
           expenses: item.expenses
         };
       } else {

@@ -11,11 +11,13 @@ export interface InvoiceItem {
   unitPrice: number;
   discount?: number;
   lineTotal: number;
+  hsnCode?: string;
 }
 
 export interface InvoicePayment {
   amount: number;
   paymentType: string;
+  referenceNumber?: string;
   date: string;
 }
 
@@ -28,6 +30,9 @@ export interface Invoice {
   subtotal: number;
   gstRate: number;
   gstAmount: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
   total: number;
   paidAmount: number;
   payments?: InvoicePayment[];
@@ -185,5 +190,19 @@ export function useUpdateInvoice() {
       toast.success('Invoice updated!');
     },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to update invoice'),
+  });
+}
+
+export function usePaymentHistory(params?: { search?: string; from?: string; to?: string; page?: number }) {
+  const { activeCompanyId } = useCompany();
+  return useQuery({
+    queryKey: ['sales', 'payment-history', params, activeCompanyId],
+    queryFn: async () => {
+      const { data } = await api.get('/sales/payments/history', { 
+        params: { ...params, companyId: activeCompanyId } 
+      });
+      return { data: data.data, total: data.total };
+    },
+    staleTime: 15000,
   });
 }

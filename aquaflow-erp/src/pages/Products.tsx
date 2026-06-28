@@ -44,7 +44,7 @@ interface ProductFormData {
   name: string; brand: string; category: string;
   pelletSize: string; weight: number; price: number;
   purchasePrice: number; stock: number; lowStockThreshold: number;
-  description: string; imageUrl: string;
+  description: string; imageUrl: string; hsnCode: string;
 }
 
 const categoryColors: Record<string, string> = {
@@ -216,6 +216,7 @@ export default function Products() {
       price: product.price, purchasePrice: product.purchasePrice || 0,
       stock: product.stock, lowStockThreshold: product.lowStockThreshold,
       description: product.description || "", imageUrl: product.imageUrl || "",
+      hsnCode: product.hsnCode || "",
     });
     setIsEditOpen(true);
   };
@@ -606,7 +607,10 @@ export default function Products() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
+                <FormInput label="HSN Code" placeholder="e.g. 230990" {...registerAdd("hsnCode")} />
                 <FormInput label="Pellet Size" placeholder="2mm" {...registerAdd("pelletSize")} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <FormNumber
                   label="Weight (kg)"
                   placeholder="25"
@@ -689,7 +693,10 @@ export default function Products() {
                 <FormSelect label="Category" options={categories.map((c) => ({ value: c, label: c }))} name="category" control={controlEdit} />
               </div>
               <div className="grid grid-cols-2 gap-3">
+                <FormInput label="HSN Code" placeholder="e.g. 230990" {...registerEdit("hsnCode")} />
                 <FormInput label="Pellet Size" {...registerEdit("pelletSize")} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <FormNumber label="Weight (kg)" {...registerEdit("weight", { required: "Required", min: { value: 0.1, message: "Must be > 0" } })} error={editErrors.weight} />
               </div>
               <div className="grid grid-cols-2 gap-3">

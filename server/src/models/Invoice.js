@@ -7,6 +7,7 @@ const invoiceItemSchema = new mongoose.Schema({
     required: true,
   },
   productName: { type: String, required: true }, // snapshot at time of sale
+  hsnCode: { type: String, default: '' }, // snapshot at time of sale
   quantity: {
     type: Number,
     required: true,
@@ -54,6 +55,18 @@ const invoiceSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    cgstAmount: {
+      type: Number,
+      default: 0,
+    },
+    sgstAmount: {
+      type: Number,
+      default: 0,
+    },
+    igstAmount: {
+      type: Number,
+      default: 0,
+    },
     discountAmount: {
       type: Number,
       default: 0,
@@ -69,6 +82,7 @@ const invoiceSchema = new mongoose.Schema(
     payments: [{
       amount: { type: Number, required: true },
       paymentType: { type: String, enum: ['Cash', 'UPI', 'Cheque', 'Bank Transfer', 'Credit'], required: true },
+      referenceNumber: { type: String, default: '' },
       date: { type: Date, default: Date.now }
     }],
     paymentType: {

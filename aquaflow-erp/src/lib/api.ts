@@ -11,12 +11,18 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach JWT token on every request
+// Attach JWT token and activeCompanyId on every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
+  const activeCompanyId = localStorage.getItem('activeCompanyId');
+  if (activeCompanyId) {
+    config.params = { ...config.params, companyId: activeCompanyId };
+  }
+  
   return config;
 });
 

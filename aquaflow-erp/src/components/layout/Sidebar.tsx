@@ -13,6 +13,7 @@ import {
   Truck,
   ShoppingBag,
   RotateCcw,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLogo } from "@/components/AppLogo";
@@ -22,6 +23,7 @@ const navItems = [
   { to: "/products", label: "Products", icon: Package },
   { to: "/inventory", label: "Inventory", icon: Layers },
   { to: "/sales", label: "Sales", icon: ShoppingCart },
+  { to: "/quotations", label: "Quotations", icon: FileText },
   { to: "/customers", label: "Customers", icon: Users },
   { to: "/expenses", label: "Expenses", icon: Receipt },
   { to: "/warehouses", label: "Warehouses", icon: Warehouse },

@@ -20,6 +20,7 @@ import Suppliers from "./pages/Suppliers.tsx";
 import PurchaseOrders from "./pages/PurchaseOrders.tsx";
 import InvoicePrint from "./pages/InvoicePrint.tsx";
 import CreditNotes from "./pages/CreditNotes.tsx";
+import Quotations from "./pages/Quotations.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { WebSocketProvider } from "@/hooks/useWebSocketContext";
 import { AppLogo } from "@/components/AppLogo";
@@ -137,6 +138,7 @@ const App = () => {
               <Route path="/suppliers" element={<Suppliers />} />
               <Route path="/purchase-orders" element={<PurchaseOrders />} />
               <Route path="/credit-notes" element={<CreditNotes />} />
+              <Route path="/quotations" element={<Quotations />} />
             </Route>
 
             {/* Catch-all */}

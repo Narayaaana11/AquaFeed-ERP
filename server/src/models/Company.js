@@ -62,6 +62,14 @@ const companySchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
+    quotationPrefix: {
+      type: String,
+      default: 'QTN',
+    },
+    quotationCounter: {
+      type: Number,
+      default: 1,
+    },
     financialYearStart: {
       type: String,
       default: 'April',

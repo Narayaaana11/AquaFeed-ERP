@@ -338,21 +338,8 @@ async function syncTallyData(targetCompanyId = null) {
       if (targetCompanyId) {
         company = await Company.findById(targetCompanyId);
       } else {
-        // Resolve company to the owner's main company profile to consolidate data
-        const ownerUser = await User.findOne({ email: 'owner@vijayadurga.com' });
-        if (ownerUser && ownerUser.company) {
-          company = await Company.findById(ownerUser.company);
-        }
-        
-        if (!company) {
-          // Fallback to case-insensitive name match
-          company = await Company.findOne({ name: { $regex: new RegExp('^' + companyName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '$', 'i') } });
-        }
-        
-        if (!company) {
-          // Fallback to any existing company in the database
-          company = await Company.findOne();
-        }
+        // Find existing company by exact name match (case-insensitive)
+        company = await Company.findOne({ name: { $regex: new RegExp('^' + companyName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '$', 'i') } });
         
         if (!company) {
           // Last resort: create a new company profile
@@ -366,7 +353,7 @@ async function syncTallyData(targetCompanyId = null) {
             state: '',
             currency: 'INR'
           });
-          console.log(`🏢 Created default Company: ${companyName}`);
+          console.log(`🏢 Created new Company: ${companyName}`);
         }
       }
       const companyId = company._id;

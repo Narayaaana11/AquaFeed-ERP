@@ -12,6 +12,11 @@ const productSchema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    hsnCode: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     brand: {
       type: String,
       required: [true, 'Brand is required'],

@@ -39,6 +39,7 @@ export default function Sales() {
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [paymentReference, setPaymentReference] = useState("");
   const [returnItems, setReturnItems] = useState<{ productId: string; productName: string; max: number; quantity: number; unitPrice: number }[]>([]);
   const [returnReason, setReturnReason] = useState("");
   const [isCustomerComboboxOpen, setIsCustomerComboboxOpen] = useState(false);
@@ -164,8 +165,10 @@ export default function Sales() {
       id: selectedInvoice._id,
       amount: paymentAmount,
       paymentType: paymentMethod,
+      referenceNumber: paymentReference,
     });
     
+    setPaymentReference("");
     setShowAddPayment(false);
     setIsViewOpen(false);
   };
@@ -628,7 +631,10 @@ export default function Sales() {
               {selectedInvoice.items.map((item, i) => (
                 <div key={i} className="p-3.5 rounded-xl bg-secondary/50 border border-border/80">
                   <div className="flex justify-between items-start gap-2">
-                    <p className="font-display font-semibold text-sm text-foreground">{item.productName}</p>
+                    <div>
+                      <p className="font-display font-semibold text-sm text-foreground">{item.productName}</p>
+                      {item.hsnCode && <p className="text-[10px] text-muted-foreground mt-0.5">HSN: {item.hsnCode}</p>}
+                    </div>
                     <p className="font-display font-bold text-sm text-brand">₹{(item.lineTotal || 0).toLocaleString("en-IN")}</p>
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground mt-2 pt-2 border-t border-border/45">
@@ -653,7 +659,10 @@ export default function Sales() {
                 <tbody>
                   {selectedInvoice.items.map((item, i) => (
                     <tr key={i} className="border-b border-border last:border-0 hover:bg-background/40 transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">{item.productName}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-foreground">{item.productName}</div>
+                        {item.hsnCode && <div className="text-[10px] text-muted-foreground">HSN: {item.hsnCode}</div>}
+                      </td>
                       <td className="px-4 py-3 text-right text-foreground">{item.quantity}</td>
                       <td className="px-4 py-3 text-right text-foreground">₹{(item.unitPrice || 0).toLocaleString("en-IN")}</td>
                       <td className="px-4 py-3 text-right font-semibold text-foreground">₹{(item.lineTotal || 0).toLocaleString("en-IN")}</td>
@@ -669,7 +678,7 @@ export default function Sales() {
                 <div className="bg-secondary rounded-lg p-3 space-y-2">
                   {selectedInvoice.payments.map((p, i) => (
                     <div key={i} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{new Date(p.date).toLocaleDateString("en-IN")} ({p.paymentType})</span>
+                      <span className="text-muted-foreground">{new Date(p.date).toLocaleDateString("en-IN")} ({p.paymentType}){p.referenceNumber ? ` - Ref: ${p.referenceNumber}` : ''}</span>
                       <span className="font-medium text-foreground">₹{p.amount.toLocaleString("en-IN")}</span>
                     </div>
                   ))}
@@ -681,6 +690,15 @@ export default function Sales() {
               <div className="text-right w-full sm:w-64">
                 <div className="flex justify-between text-sm text-muted-foreground"><span>Subtotal:</span><span>₹{(selectedInvoice.subtotal || 0).toLocaleString("en-IN")}</span></div>
                 <div className="flex justify-between text-sm text-muted-foreground mt-1"><span>GST ({selectedInvoice.gstRate}%):</span><span>₹{(selectedInvoice.gstAmount || 0).toLocaleString("en-IN")}</span></div>
+                
+                {(selectedInvoice.cgstAmount || selectedInvoice.sgstAmount || selectedInvoice.igstAmount) ? (
+                  <div className="mt-1 space-y-0.5 border-l-2 border-border/50 pl-2">
+                    {selectedInvoice.cgstAmount ? <div className="flex justify-between text-[11px] text-muted-foreground"><span>CGST:</span><span>₹{selectedInvoice.cgstAmount.toLocaleString("en-IN")}</span></div> : null}
+                    {selectedInvoice.sgstAmount ? <div className="flex justify-between text-[11px] text-muted-foreground"><span>SGST:</span><span>₹{selectedInvoice.sgstAmount.toLocaleString("en-IN")}</span></div> : null}
+                    {selectedInvoice.igstAmount ? <div className="flex justify-between text-[11px] text-muted-foreground"><span>IGST:</span><span>₹{selectedInvoice.igstAmount.toLocaleString("en-IN")}</span></div> : null}
+                  </div>
+                ) : null}
+                
                 <div className="flex justify-between border-t border-border mt-2 pt-2">
                   <span className="font-display font-semibold text-foreground">Total:</span>
                   <span className="font-display font-semibold text-foreground">₹{(selectedInvoice.total || 0).toLocaleString("en-IN")}</span>
@@ -733,6 +751,16 @@ export default function Sales() {
       </Select>
     
                   </div>
+                </div>
+                <div className="mt-3">
+                  <label className="block text-xs text-muted-foreground mb-1">Reference Number / Transaction ID (Optional)</label>
+                  <input
+                    type="text"
+                    value={paymentReference}
+                    onChange={(e) => setPaymentReference(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-border bg-surface text-sm outline-none"
+                    placeholder="e.g. UTR / Cheque No."
+                  />
                 </div>
                 <div className="flex gap-2 mt-3">
                   <button onClick={handleAddPayment} disabled={addPayment.isPending} className="px-3 h-8 rounded-md bg-brand text-white text-xs font-medium">Save Payment</button>
