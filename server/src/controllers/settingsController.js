@@ -292,6 +292,31 @@ const syncTallyData = async (req, res, next) => {
   }
 };
 
+// PUT /api/settings/companies/order
+const updateCompanyOrder = async (req, res, next) => {
+  try {
+    const { updates } = req.body; // expected: [{ _id, sortOrder }, ...]
+    if (!Array.isArray(updates)) {
+      return res.status(400).json({ success: false, message: 'Updates must be an array.' });
+    }
+
+    const bulkOps = updates.map(update => ({
+      updateOne: {
+        filter: { _id: update._id },
+        update: { sortOrder: update.sortOrder }
+      }
+    }));
+
+    if (bulkOps.length > 0) {
+      await Company.bulkWrite(bulkOps);
+    }
+    
+    res.json({ success: true, message: 'Company order updated successfully.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = { 
   getCompany, 
   updateCompany, 
@@ -301,5 +326,6 @@ module.exports = {
   updateProfile, 
   loadDemoData, 
   clearCompanyData,
-  syncTallyData
+  syncTallyData,
+  updateCompanyOrder
 };

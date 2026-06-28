@@ -16,9 +16,11 @@ import {
   useUpdateUser,
   useClearCompanyData,
   useSyncTally,
+  useUpdateCompanyOrder,
 } from "@/hooks/useSettings";
+import { useCompany } from "@/context/CompanyContext";
 
-const tabs = ["Company", "Users & Roles"] as const;
+const tabs = ["Company", "Company Organization", "Users & Roles"] as const;
 type Tab = (typeof tabs)[number];
 
 interface Employee {
@@ -78,7 +80,27 @@ export default function Settings() {
   const updateUserMutation = useUpdateUser();
   const clearDataMutation = useClearCompanyData();
   const syncTallyMutation = useSyncTally();
+  const updateCompanyOrderMutation = useUpdateCompanyOrder();
   const [syncStats, setSyncStats] = useState<any>(null);
+  
+  const { companies } = useCompany();
+  const [companyOrders, setCompanyOrders] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const initial: Record<string, number> = {};
+    companies.forEach((c: any, index: number) => {
+      initial[c._id] = c.sortOrder ?? index + 1;
+    });
+    setCompanyOrders(initial);
+  }, [companies]);
+
+  const handleSaveCompanyOrder = async () => {
+    const updates = Object.entries(companyOrders).map(([id, order]) => ({
+      _id: id,
+      sortOrder: order,
+    }));
+    await updateCompanyOrderMutation.mutateAsync(updates);
+  };
 
   const handleSyncTally = async () => {
     try {
@@ -500,6 +522,54 @@ export default function Settings() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {tab === "Company Organization" && isOwner && (
+        <div className="bg-surface rounded-xl border border-border shadow-card overflow-hidden max-w-2xl">
+          <div className="p-6 border-b border-border">
+            <h3 className="font-display font-semibold text-foreground">
+              Company Organization
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Set a priority order (1, 2, 3...) for your companies. The company with order 1 will be set as your default when logging in, and the navigation dropdown will list them in this exact order.
+            </p>
+          </div>
+          <div className="p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-background">
+                  <th className="px-6 py-3 text-left font-display font-semibold text-muted-foreground">Company Name</th>
+                  <th className="px-6 py-3 text-left font-display font-semibold text-muted-foreground w-32">Order</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {companies.map((c: any) => (
+                  <tr key={c._id} className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-4 font-medium text-foreground">{c.name}</td>
+                    <td className="px-6 py-4">
+                      <input
+                        type="number"
+                        min="1"
+                        value={companyOrders[c._id] || 1}
+                        onChange={(e) => setCompanyOrders(prev => ({ ...prev, [c._id]: parseInt(e.target.value) || 1 }))}
+                        className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-4 border-t border-border bg-background flex justify-end">
+            <button
+              onClick={handleSaveCompanyOrder}
+              disabled={updateCompanyOrderMutation.isPending}
+              className="h-9 px-6 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {updateCompanyOrderMutation.isPending ? "Saving..." : "Save Order"}
+            </button>
+          </div>
         </div>
       )}
 

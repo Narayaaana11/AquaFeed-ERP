@@ -66,6 +66,10 @@ const companySchema = new mongoose.Schema(
       type: String,
       default: 'April',
     },
+    sortOrder: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

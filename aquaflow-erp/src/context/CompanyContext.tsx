@@ -16,7 +16,7 @@ const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
 export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(() => {
-    return localStorage.getItem('activeCompanyId') || 'all';
+    return localStorage.getItem('activeCompanyId') || null;
   });
   const [companies, setCompanies] = useState<Company[]>([]);
 

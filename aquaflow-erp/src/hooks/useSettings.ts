@@ -126,3 +126,17 @@ export function useSyncTally() {
   });
 }
 
+export function useUpdateCompanyOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (updates: { _id: string; sortOrder: number }[]) => {
+      const { data } = await api.put('/settings/companies/order', { updates });
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['companies'] });
+      toast.success('Company order saved!');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to save order'),
+  });
+}

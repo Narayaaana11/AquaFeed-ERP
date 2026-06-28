@@ -6,7 +6,7 @@ const Company = require('../models/Company');
 // Get all companies (for global filter)
 router.get('/companies', protect, async (req, res) => {
   try {
-    const companies = await Company.find().select('name _id').sort('name');
+    const companies = await Company.find().select('name _id sortOrder').sort('sortOrder name');
     res.json({ success: true, data: companies });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch companies' });
@@ -15,10 +15,11 @@ router.get('/companies', protect, async (req, res) => {
 
 const { roleGuard } = require('../middleware/roleGuard');
 const {
-  getCompany, updateCompany, getUsers, createUser, updateUser, updateProfile, loadDemoData, clearCompanyData, syncTallyData
+  getCompany, updateCompany, getUsers, createUser, updateUser, updateProfile, loadDemoData, clearCompanyData, syncTallyData, updateCompanyOrder
 } = require('../controllers/settingsController');
 
 router.use(protect);
+router.put('/companies/order', roleGuard('Owner'), updateCompanyOrder);
 router.get('/company', getCompany);
 router.put('/company', roleGuard('Owner'), updateCompany);
 router.post('/load-demo', roleGuard('Owner'), loadDemoData);

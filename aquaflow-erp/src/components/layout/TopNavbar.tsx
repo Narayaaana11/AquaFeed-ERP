@@ -26,9 +26,9 @@ export function TopNavbar({ title, subtitle }: TopNavbarProps) {
       const res = await api.get("/settings/companies");
       if (res.data?.success && res.data.data) {
         setCompanies(res.data.data);
-        // If no active company is set, default to 'all'
+        // If no active company is set, default to the first one (order 1)
         if (!activeCompanyId && res.data.data.length > 0) {
-          setActiveCompanyId('all');
+          setActiveCompanyId(res.data.data[0]._id);
         }
       }
       return res.data;
