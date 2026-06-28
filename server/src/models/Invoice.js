@@ -127,7 +127,7 @@ const invoiceSchema = new mongoose.Schema(
 invoiceSchema.index({ company: 1, invoiceNumber: 1 }, { unique: true });
 invoiceSchema.index({ company: 1, status: 1 });
 invoiceSchema.index({ company: 1, customer: 1 });
-invoiceSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, sparse: true });
+invoiceSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, partialFilterExpression: { tallyGuid: { $type: "string" } } });
 invoiceSchema.index({ company: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

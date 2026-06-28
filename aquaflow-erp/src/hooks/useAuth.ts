@@ -54,7 +54,7 @@ export function useAuth() {
   }, [navigate]);
 
   const register = useCallback(async (formData: {
-    name: string; email: string; password: string; companyName: string; phone?: string; gstNumber?: string; logo?: File;
+    name: string; email: string; password: string; companyName: string; phone?: string; gstNumber?: string; state?: string; logo?: File;
   }) => {
     setIsLoading(true);
     setError('');
@@ -66,6 +66,7 @@ export function useAuth() {
       data.append('companyName', formData.companyName);
       if (formData.phone) data.append('phone', formData.phone);
       if (formData.gstNumber) data.append('gstNumber', formData.gstNumber);
+      if (formData.state) data.append('state', formData.state);
       if (formData.logo) data.append('logo', formData.logo);
 
       const response = await api.post('/auth/register', data, {

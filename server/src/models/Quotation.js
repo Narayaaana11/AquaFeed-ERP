@@ -33,6 +33,6 @@ const quotationSchema = new mongoose.Schema({
 });
 
 quotationSchema.index({ company: 1, quotationNumber: 1 }, { unique: true });
-quotationSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, sparse: true });
+quotationSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, partialFilterExpression: { tallyGuid: { $type: "string" } } });
 
 module.exports = mongoose.model('Quotation', quotationSchema);

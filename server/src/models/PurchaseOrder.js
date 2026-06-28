@@ -87,7 +87,7 @@ const purchaseOrderSchema = new mongoose.Schema(
 
 purchaseOrderSchema.index({ company: 1, poNumber: 1 }, { unique: true });
 purchaseOrderSchema.index({ company: 1, status: 1 });
-purchaseOrderSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, sparse: true });
+purchaseOrderSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, partialFilterExpression: { tallyGuid: { $type: "string" } } });
 purchaseOrderSchema.index({ company: 1, supplier: 1 });
 purchaseOrderSchema.index({ company: 1, createdAt: -1 });
 

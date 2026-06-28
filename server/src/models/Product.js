@@ -85,7 +85,7 @@ const productSchema = new mongoose.Schema(
 // Index for fast company-scoped queries
 productSchema.index({ company: 1, isActive: 1 });
 productSchema.index({ company: 1, stock: 1 });
-productSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, sparse: true });
+productSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, partialFilterExpression: { tallyGuid: { $type: "string" } } });
 
 // Virtual: stock status
 productSchema.virtual('stockStatus').get(function () {

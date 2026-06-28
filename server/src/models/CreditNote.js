@@ -80,6 +80,6 @@ const creditNoteSchema = new mongoose.Schema(
 creditNoteSchema.index({ company: 1, creditNoteNumber: 1 }, { unique: true });
 creditNoteSchema.index({ company: 1, customer: 1 });
 creditNoteSchema.index({ company: 1, originalInvoice: 1 });
-creditNoteSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, sparse: true });
+creditNoteSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, partialFilterExpression: { tallyGuid: { $type: "string" } } });
 
 module.exports = mongoose.model('CreditNote', creditNoteSchema);

@@ -37,6 +37,7 @@ interface CompanyData {
   phone: string;
   email: string;
   address: string;
+  state: string;
 }
 
 interface EmployeeFormData {
@@ -133,6 +134,7 @@ export default function Settings() {
         phone: company.phone || "",
         email: company.email || "",
         address: company.address || "",
+        state: company.state || "",
       });
       // Set logo preview if it exists
       if (company.logoUrl) {
@@ -195,6 +197,7 @@ export default function Settings() {
         phone: data.phone,
         email: data.email,
         address: data.address,
+        state: data.state,
       };
 
       // If a new logo file was selected, convert it to base64
@@ -331,29 +334,47 @@ export default function Settings() {
               <div className="w-8 h-8 rounded-full border-4 border-brand/20 border-t-brand animate-spin" />
             </div>
           ) : (
-            <form
-              onSubmit={handleCompanySubmit(onCompanySubmit)}
-              className="space-y-4"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormInput
-                  label="Company Name"
-                  {...registerCompany("companyName", validationRules.name)}
-                />
-                <FormInput
-                  label="GST Number"
-                  {...registerCompany("gstNumber", validationRules.gst)}
-                />
-                <FormInput
-                  label="Phone Number"
-                  {...registerCompany("phone", validationRules.phone)}
-                />
-                <FormInput
-                  label="Email Address"
-                  type="email"
-                  {...registerCompany("email", validationRules.email)}
-                />
-              </div>
+            <div>
+              {company && !company.state && (
+                <div className="mb-5 p-4 rounded-lg bg-warning/10 border border-warning/20 flex gap-3 items-start">
+                  <ShieldAlert className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-warning">Company State is not set!</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Please set your company's state below for accurate GST split calculations (CGST/SGST vs IGST).
+                      If left blank, calculations will default to intra-state tax (CGST + SGST).
+                    </p>
+                  </div>
+                </div>
+              )}
+              <form
+                onSubmit={handleCompanySubmit(onCompanySubmit)}
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormInput
+                    label="Company Name"
+                    {...registerCompany("companyName", validationRules.name)}
+                  />
+                  <FormInput
+                    label="GST Number"
+                    {...registerCompany("gstNumber", validationRules.gst)}
+                  />
+                  <FormInput
+                    label="Phone Number"
+                    {...registerCompany("phone", validationRules.phone)}
+                  />
+                  <FormInput
+                    label="Email Address"
+                    type="email"
+                    {...registerCompany("email", validationRules.email)}
+                  />
+                  <FormInput
+                    label="State"
+                    placeholder="Andhra Pradesh"
+                    {...registerCompany("state", { required: "State is required" })}
+                  />
+                </div>
               <div>
                 <label className="block text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
                   Address
@@ -432,6 +453,7 @@ export default function Settings() {
                         phone: company.phone || "",
                         email: company.email || "",
                         address: company.address || "",
+                        state: company.state || "",
                       });
                     }
                   }}
@@ -441,6 +463,7 @@ export default function Settings() {
                 </button>
               </div>
             </form>
+            </div>
           )}
 
           {isOwner && (

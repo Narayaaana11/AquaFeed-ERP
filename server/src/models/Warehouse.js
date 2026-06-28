@@ -59,6 +59,6 @@ const warehouseSchema = new mongoose.Schema(
 );
 
 warehouseSchema.index({ company: 1, status: 1 });
-warehouseSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, sparse: true });
+warehouseSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, partialFilterExpression: { tallyGuid: { $type: "string" } } });
 
 module.exports = mongoose.model('Warehouse', warehouseSchema);

@@ -11,7 +11,7 @@ const signToken = (id) => {
 // POST /api/auth/register
 const register = async (req, res, next) => {
   try {
-    const { name, email, password, companyName, phone, gstNumber, address } = req.body;
+    const { name, email, password, companyName, phone, gstNumber, address, state } = req.body;
 
     // Check if email already exists
     const existingUser = await User.findOne({ email });
@@ -33,6 +33,7 @@ const register = async (req, res, next) => {
       phone,
       gstNumber,
       address,
+      state,
       email,
       logoUrl,
     });

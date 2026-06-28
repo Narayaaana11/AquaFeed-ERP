@@ -12,6 +12,7 @@ interface RegisterFormData {
   name: string;
   email: string;
   phone: string;
+  state: string;
   password: string;
   confirmPassword: string;
 }
@@ -29,7 +30,7 @@ export default function Register() {
     formState: { errors },
   } = useForm<RegisterFormData>({
     mode: "onBlur",
-    defaultValues: { companyName: "", name: "", email: "", phone: "", password: "", confirmPassword: "" },
+    defaultValues: { companyName: "", name: "", email: "", phone: "", state: "", password: "", confirmPassword: "" },
   });
 
   const password = watch("password");
@@ -64,22 +65,13 @@ export default function Register() {
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      const formData = new FormData();
-      formData.append("name", data.name);
-      formData.append("email", data.email);
-      formData.append("password", data.password);
-      formData.append("companyName", data.companyName);
-      formData.append("phone", data.phone);
-      if (logoFile) {
-        formData.append("logo", logoFile);
-      }
-
       await registerUser({
         name: data.name,
         email: data.email,
         password: data.password,
         companyName: data.companyName,
         phone: data.phone,
+        state: data.state,
         logo: logoFile,
       });
     } catch {
@@ -176,6 +168,14 @@ export default function Register() {
               {...register("phone", validationRules.phone)}
               error={errors.phone}
               helperText="10-digit phone number"
+            />
+
+            <FormInput
+              label="State"
+              placeholder="Andhra Pradesh"
+              {...register("state", { required: "State is required" })}
+              error={errors.state}
+              helperText="Required for accurate GST calculations (intra-state vs inter-state)"
             />
 
             <FormInput
