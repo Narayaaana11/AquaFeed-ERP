@@ -21,19 +21,27 @@ const protect = async (req, res, next) => {
     }
 
     req.user = user;
-    
-    // Allow overriding the company context via query param for global filtering
-    if (req.query.companyId) {
-      if (req.query.companyId === 'all') {
-        req.companyId = { $exists: true };
-      } else {
-        req.companyId = req.query.companyId;
+    req.companyId = user.company._id; // always default to the user's own company
+
+    // Allow context-switching only to companies the user is explicitly allowed to access
+    if (req.query.companyId && req.query.companyId !== String(user.company._id)) {
+      const requestedId = req.query.companyId;
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(requestedId);
+      const isAllowed = isValidObjectId &&
+        Array.isArray(user.accessibleCompanies) &&
+        user.accessibleCompanies.some(id => String(id) === requestedId);
+
+      if (!isAllowed) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to access this company.',
+        });
       }
-    } else {
-      req.companyId = user.company._id;
+      req.companyId = requestedId;
     }
-    
+
     next();
+
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Token invalid or expired.' });
   }

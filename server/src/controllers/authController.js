@@ -45,6 +45,7 @@ const register = async (req, res, next) => {
       role: 'Owner',
       company: company._id,
       phone,
+      accessibleCompanies: [company._id],
     });
 
     const token = signToken(user._id);

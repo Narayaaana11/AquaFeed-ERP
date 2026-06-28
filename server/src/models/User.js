@@ -31,6 +31,10 @@ const userSchema = new mongoose.Schema(
       ref: 'Company',
       required: true,
     },
+    accessibleCompanies: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+    }],
     isActive: {
       type: Boolean,
       default: true,
