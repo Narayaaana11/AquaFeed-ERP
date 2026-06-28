@@ -105,3 +105,20 @@ export function useCancelQuotation() {
     onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to delete quotation'),
   });
 }
+
+export function useConvertQuotation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.post(`/quotations/${id}/convert`);
+      return data.data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['quotations'] });
+      qc.invalidateQueries({ queryKey: ['sales'] });
+      toast.success(`Quotation converted to Invoice ${data.invoiceNumber || ''}!`);
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to convert quotation'),
+  });
+}
+

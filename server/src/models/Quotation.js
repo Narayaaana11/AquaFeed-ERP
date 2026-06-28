@@ -26,6 +26,7 @@ const quotationSchema = new mongoose.Schema({
   status: { type: String, enum: ['Draft', 'Sent', 'Accepted', 'Rejected', 'Converted'], default: 'Draft' },
   validUntil: { type: Date },
   notes: { type: String },
+  convertedInvoice: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
   tallyGuid: { type: String, sparse: true }
 }, {
   timestamps: true

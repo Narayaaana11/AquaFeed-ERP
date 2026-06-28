@@ -3,8 +3,19 @@ const Quotation = require('../models/Quotation');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const Company = require('../models/Company');
+const Invoice = require('../models/Invoice');
+const StockAdjustment = require('../models/StockAdjustment');
+const Warehouse = require('../models/Warehouse');
+const Inventory = require('../models/Inventory');
 const { calculateGstSplit } = require('../utils/gstCalculator');
-const { emitQuotationCreated, emitQuotationUpdated, emitQuotationDeleted } = require('../utils/websocket');
+const {
+  emitQuotationCreated,
+  emitQuotationUpdated,
+  emitQuotationDeleted,
+  emitInvoiceCreated,
+  emitLowStockAlert,
+  emitDashboardUpdate
+} = require('../utils/websocket');
 
 
 const generateQuotationNumber = async (company, session) => {
@@ -271,4 +282,209 @@ const deleteQuotation = async (req, res, next) => {
   }
 };
 
-module.exports = { getQuotations, getQuotation, createQuotation, updateQuotation, updateQuotationStatus, deleteQuotation };
+const generateInvoiceNumberInternal = async (company, session) => {
+  const prefix = company.invoicePrefix || 'INV';
+  const counter = company.invoiceCounter || 1;
+  const number = String(counter).padStart(4, '0');
+  await Company.findByIdAndUpdate(company._id, { $inc: { invoiceCounter: 1 } }, { session });
+  return `${prefix}-${number}`;
+};
+
+const convertToInvoice = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const quotation = await Quotation.findOne({ _id: req.params.id, company: req.companyId }).session(session);
+    if (!quotation) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ success: false, message: 'Quotation not found.' });
+    }
+
+    if (quotation.status === 'Converted') {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, message: 'Quotation has already been converted to an invoice.' });
+    }
+
+    const customer = await Customer.findOne({ _id: quotation.customer, company: req.companyId }).session(session);
+    if (!customer) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ success: false, message: 'Customer not found.' });
+    }
+
+    const company = await Company.findById(req.companyId).session(session);
+
+    // Find warehouse - default or first available
+    const defaultWh = await Warehouse.findOne({ company: req.companyId, isDefault: true }).session(session);
+    if (!defaultWh) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, message: 'No default warehouse configured for this company.' });
+    }
+    const targetWarehouseId = defaultWh._id;
+
+    // Check stock for each product in warehouse
+    for (const item of quotation.items) {
+      const product = await Product.findOne({ _id: item.product, company: req.companyId }).session(session);
+      if (!product) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(404).json({ success: false, message: `Product not found: ${item.product}` });
+      }
+
+      const invRecord = await Inventory.findOne({
+        product: product._id,
+        warehouse: targetWarehouseId,
+        company: req.companyId,
+      }).session(session);
+
+      const availableStock = invRecord ? invRecord.quantity : 0;
+      if (availableStock < item.quantity) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for "${product.name}" in warehouse "${defaultWh.name}". Available: ${availableStock}, Requested: ${item.quantity}`,
+        });
+      }
+    }
+
+    // Invoice GST Calculations (re-use from Quotation)
+    const invoiceGstRate = quotation.gstRate || company.gstRate || 5;
+    const { cgstAmount, sgstAmount, igstAmount } = calculateGstSplit(company.state, customer.state, quotation.gstAmount);
+
+    const invoiceNumber = await generateInvoiceNumberInternal(company, session);
+
+    // Default to Credit invoice for conversion, or check if customer has outstanding credit limit
+    const total = quotation.total;
+    const initialPaidAmount = 0; // standard convert to credit invoice
+    const creditAmount = total - initialPaidAmount;
+
+    // Credit limit check
+    if (creditAmount > 0) {
+      const newOutstanding = customer.outstandingBalance + creditAmount;
+      if (customer.creditLimit > 0 && newOutstanding > customer.creditLimit) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({
+          success: false,
+          message: `Credit limit exceeded for ${customer.name}. Limit: ₹${customer.creditLimit}, Outstanding would be: ₹${newOutstanding}`,
+        });
+      }
+    }
+
+    const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const lineItems = quotation.items.map(item => ({
+      product: item.product,
+      productName: item.productName,
+      hsnCode: item.hsnCode || '',
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      discount: item.discount || 0,
+      lineTotal: item.lineTotal,
+    }));
+
+    const [invoice] = await Invoice.create([{
+      invoiceNumber,
+      customer: customer._id,
+      customerName: customer.name,
+      items: lineItems,
+      subtotal: quotation.subtotal,
+      gstRate: invoiceGstRate,
+      gstAmount: quotation.gstAmount,
+      cgstAmount,
+      sgstAmount,
+      igstAmount,
+      total,
+      paidAmount: initialPaidAmount,
+      payments: [],
+      paymentType: 'Credit',
+      status: 'Credit',
+      dueDate,
+      notes: quotation.notes || `Converted from quotation ${quotation.quotationNumber}`,
+      createdBy: req.user._id,
+      company: req.companyId,
+    }], { session });
+
+    // Deduct stock and log adjustment
+    for (const item of quotation.items) {
+      const product = await Product.findById(item.product).session(session);
+      const prevStock = product.stock;
+
+      const invRecord = await Inventory.findOne({
+        product: product._id,
+        warehouse: targetWarehouseId,
+        company: req.companyId,
+      }).session(session);
+
+      invRecord.quantity -= item.quantity;
+      await invRecord.save({ session });
+
+      product.stock -= item.quantity;
+      await product.save({ session });
+
+      await StockAdjustment.create([{
+        product: product._id,
+        warehouse: targetWarehouseId,
+        type: 'sale',
+        quantity: item.quantity,
+        previousStock: prevStock,
+        newStock: product.stock,
+        reason: `Sale (Converted) - ${invoiceNumber}`,
+        reference: invoiceNumber,
+        createdBy: req.user._id,
+        company: req.companyId,
+      }], { session });
+    }
+
+    // Update customer outstanding
+    await Customer.findByIdAndUpdate(customer._id, { $inc: { outstandingBalance: creditAmount } }, { session });
+
+    // Update Quotation status & reference
+    quotation.status = 'Converted';
+    quotation.convertedInvoice = invoice._id;
+    await quotation.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // Populate and emit WebSocket updates
+    const populatedInvoice = await Invoice.findById(invoice._id).populate('customer', 'name phone');
+    const populatedQuotation = await Quotation.findById(quotation._id).populate('customer', 'name phone');
+
+    const io = req.app.locals.io;
+    if (io) {
+      emitInvoiceCreated(io, req.companyId, populatedInvoice);
+      emitQuotationUpdated(io, req.companyId, populatedQuotation);
+
+      // Low stock check
+      const lowStockProducts = await Product.find({
+        company: req.companyId,
+        isActive: true,
+        $expr: { $lt: ['$stock', '$lowStockThreshold'] },
+      });
+      if (lowStockProducts.length > 0) {
+        emitLowStockAlert(io, req.companyId, lowStockProducts);
+      }
+      emitDashboardUpdate(io, req.companyId, { event: 'invoice_created', invoiceTotal: total });
+    }
+
+    res.status(201).json({ success: true, data: populatedInvoice });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    next(err);
+  }
+};
+
+module.exports = {
+  getQuotations,
+  getQuotation,
+  createQuotation,
+  updateQuotation,
+  updateQuotationStatus,
+  deleteQuotation,
+  convertToInvoice
+};

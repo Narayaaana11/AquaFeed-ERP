@@ -7,8 +7,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { useQuotations, useCreateQuotation, useUpdateQuotationStatus, useCancelQuotation, type Quotation } from "@/hooks/useQuotations";
-import { useCreateInvoice } from "@/hooks/useSales";
+import { useQuotations, useCreateQuotation, useUpdateQuotationStatus, useCancelQuotation, useConvertQuotation, type Quotation } from "@/hooks/useQuotations";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useProducts } from "@/hooks/useProducts";
 import { useQuotations as useQuotationsWebSocket } from "@/hooks/useModuleWebSocket";
@@ -54,7 +53,7 @@ export default function Quotations() {
   const createQuotation = useCreateQuotation();
   const updateStatus = useUpdateQuotationStatus();
   const cancelQuotation = useCancelQuotation();
-  const createInvoice = useCreateInvoice();
+  const convertQuotation = useConvertQuotation();
 
   const { register, control, handleSubmit, reset, watch, setValue } =
     useForm<CreateQuotationFormData>({
@@ -111,17 +110,7 @@ export default function Quotations() {
   const handleConvertToInvoice = async () => {
     if (!selectedQuotation) return;
     try {
-      await createInvoice.mutateAsync({
-        customerId: typeof selectedQuotation.customer === 'object' ? selectedQuotation.customer._id : selectedQuotation.customer,
-        paymentType: 'Credit',
-        notes: `Converted from ${selectedQuotation.quotationNumber}`,
-        items: selectedQuotation.items.map(i => ({
-          productId: typeof i.product === 'object' ? (i.product as any)._id : i.product,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice
-        }))
-      });
-      await updateStatus.mutateAsync({ id: selectedQuotation._id, status: 'Converted' });
+      await convertQuotation.mutateAsync(selectedQuotation._id);
       setIsViewOpen(false);
       navigate('/sales');
     } catch (err) {
@@ -550,10 +539,10 @@ export default function Quotations() {
               {selectedQuotation.status !== 'Converted' && selectedQuotation.status !== 'Rejected' && (
                 <button
                   onClick={handleConvertToInvoice}
-                  disabled={createInvoice.isPending}
+                  disabled={convertQuotation.isPending}
                   className="flex items-center gap-2 px-4 h-9 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 transition-colors disabled:opacity-50"
                 >
-                  <CheckCircle className="w-4 h-4" /> {createInvoice.isPending ? 'Converting...' : 'Convert to Invoice'}
+                  <CheckCircle className="w-4 h-4" /> {convertQuotation.isPending ? 'Converting...' : 'Convert to Invoice'}
                 </button>
               )}
             </div>
