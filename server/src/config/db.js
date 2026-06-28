@@ -19,6 +19,14 @@ const connectDB = async () => {
           // Index might not exist or already dropped, ignore
         }
       }
+      
+      // Also drop the legacy global unique quotationNumber index to allow company-scoped unique index
+      try {
+        await db.collection('quotations').dropIndex('quotationNumber_1');
+        console.log('Successfully dropped legacy global unique index quotationNumber_1 from quotations collection.');
+      } catch (e) {
+        // Index might not exist or already dropped, ignore
+      }
     } catch (indexError) {
       console.error('Error dropping old indexes:', indexError.message);
     }

@@ -12,7 +12,7 @@ const quotationItemSchema = new mongoose.Schema({
 
 const quotationSchema = new mongoose.Schema({
   company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
-  quotationNumber: { type: String, required: true, unique: true },
+  quotationNumber: { type: String, required: true },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
   customerName: { type: String, required: true },
   items: [quotationItemSchema],
