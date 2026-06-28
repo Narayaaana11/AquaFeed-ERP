@@ -4,6 +4,8 @@ const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const Company = require('../models/Company');
 const { calculateGstSplit } = require('../utils/gstCalculator');
+const { emitQuotationCreated, emitQuotationUpdated, emitQuotationDeleted } = require('../utils/websocket');
+
 
 const generateQuotationNumber = async (company, session) => {
   const prefix = company.quotationPrefix || 'QTN';
@@ -130,6 +132,13 @@ const createQuotation = async (req, res, next) => {
     session.endSession();
 
     const populated = await Quotation.findById(quotation._id).populate('customer', 'name phone');
+
+    // Emit WebSocket event
+    const io = req.app.locals.io;
+    if (io) {
+      emitQuotationCreated(io, req.companyId, populated);
+    }
+
     res.status(201).json({ success: true, data: populated });
   } catch (err) {
     await session.abortTransaction();
@@ -204,6 +213,13 @@ const updateQuotation = async (req, res, next) => {
     session.endSession();
 
     const populated = await Quotation.findById(quotation._id).populate('customer', 'name phone');
+
+    // Emit WebSocket event
+    const io = req.app.locals.io;
+    if (io) {
+      emitQuotationUpdated(io, req.companyId, populated);
+    }
+
     res.json({ success: true, data: populated });
   } catch (err) {
     await session.abortTransaction();
@@ -222,6 +238,12 @@ const updateQuotationStatus = async (req, res, next) => {
     quotation.status = status;
     await quotation.save();
 
+    // Emit WebSocket event
+    const io = req.app.locals.io;
+    if (io) {
+      emitQuotationUpdated(io, req.companyId, quotation);
+    }
+
     res.json({ success: true, data: quotation });
   } catch (err) {
     next(err);
@@ -236,6 +258,13 @@ const deleteQuotation = async (req, res, next) => {
     if (quotation.status === 'Converted') return res.status(400).json({ success: false, message: 'Cannot delete a converted quotation.' });
 
     await Quotation.deleteOne({ _id: quotation._id });
+
+    // Emit WebSocket event
+    const io = req.app.locals.io;
+    if (io) {
+      emitQuotationDeleted(io, req.companyId, quotation._id);
+    }
+
     res.json({ success: true, message: 'Quotation deleted.' });
   } catch (err) {
     next(err);

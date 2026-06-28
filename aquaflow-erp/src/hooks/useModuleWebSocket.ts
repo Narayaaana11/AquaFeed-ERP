@@ -254,3 +254,52 @@ export function usePurchaseOrders(onPOCreated?: (po: any) => void, onPOReceived?
 
     return poUpdates;
 }
+
+/**
+ * useQuotations - WebSocket hook for quotation updates
+ */
+export function useQuotations(
+    onQuotationCreated?: (quotation: any) => void,
+    onQuotationUpdated?: (quotation: any) => void,
+    onQuotationDeleted?: (quotationId: string) => void
+) {
+    const { isConnected, subscribe, on, off } = useWebSocketContext();
+    const [quotationUpdates, setQuotationUpdates] = useState<any>(null);
+
+    useEffect(() => {
+        if (isConnected) {
+            subscribe('quotations');
+
+            const handleQuotationCreated = (quotation: any) => {
+                devLog('📄 Quotation created:', quotation);
+                setQuotationUpdates({ type: 'created', quotation });
+                onQuotationCreated?.(quotation);
+            };
+
+            const handleQuotationUpdated = (quotation: any) => {
+                devLog('📄 Quotation updated:', quotation);
+                setQuotationUpdates({ type: 'updated', quotation });
+                onQuotationUpdated?.(quotation);
+            };
+
+            const handleQuotationDeleted = (data: any) => {
+                devLog('📄 Quotation deleted:', data.quotationId);
+                setQuotationUpdates({ type: 'deleted', quotationId: data.quotationId });
+                onQuotationDeleted?.(data.quotationId);
+            };
+
+            on('quotation_created', handleQuotationCreated);
+            on('quotation_updated', handleQuotationUpdated);
+            on('quotation_deleted', handleQuotationDeleted);
+
+            return () => {
+                off('quotation_created');
+                off('quotation_updated');
+                off('quotation_deleted');
+            };
+        }
+    }, [isConnected, subscribe, on, off, onQuotationCreated, onQuotationUpdated, onQuotationDeleted]);
+
+    return quotationUpdates;
+}
+

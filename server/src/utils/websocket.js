@@ -86,6 +86,19 @@ function emitWarehouseCreated(io, companyId, warehouse) {
     io.to(`warehouses_${companyId}`).emit('warehouse_created', warehouse);
 }
 
+// Quotation Events
+function emitQuotationCreated(io, companyId, quotation) {
+    io.to(`quotations_${companyId}`).emit('quotation_created', quotation);
+}
+
+function emitQuotationUpdated(io, companyId, quotation) {
+    io.to(`quotations_${companyId}`).emit('quotation_updated', quotation);
+}
+
+function emitQuotationDeleted(io, companyId, quotationId) {
+    io.to(`quotations_${companyId}`).emit('quotation_deleted', { quotationId });
+}
+
 // Settings Events
 function emitSettingsUpdate(io, companyId, settings) {
     io.to(`settings_${companyId}`).emit('settings_update', settings);
@@ -116,6 +129,10 @@ module.exports = {
     emitExpenseDeleted,
     emitWarehouseUpdate,
     emitWarehouseCreated,
+    emitQuotationCreated,
+    emitQuotationUpdated,
+    emitQuotationDeleted,
     emitSettingsUpdate,
     broadcastToCompany,
 };
+

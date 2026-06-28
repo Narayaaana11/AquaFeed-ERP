@@ -206,6 +206,16 @@ io.on('connection', (socket) => {
     socket.leave(`company_${socket.companyId}`);
   });
 
+  // Quotations subscriptions
+  socket.on('subscribe_quotations', () => {
+    socket.join(`quotations_${socket.companyId}`);
+    console.log(`📄 User ${socket.userId} subscribed to quotation updates`);
+  });
+
+  socket.on('unsubscribe_quotations', () => {
+    socket.leave(`quotations_${socket.companyId}`);
+  });
+
   socket.on('disconnect', () => {
     console.log(`❌ User ${socket.userId} disconnected`);
   });
