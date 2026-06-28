@@ -7,6 +7,13 @@ const Company = require('../models/Company');
 // Webhook endpoint for Tally TDL to push data instantly
 router.post('/webhook', async (req, res) => {
   try {
+    const clientSecret = req.headers['x-tally-secret'];
+    const serverSecret = process.env.TALLY_BRIDGE_SECRET;
+
+    if (!serverSecret || clientSecret !== serverSecret) {
+      return res.status(401).json({ success: false, message: 'Unauthorized. Invalid Tally Bridge Secret.' });
+    }
+
     const { type, data, companyName } = req.body;
     
     const { syncTallyData } = require('../services/tallySyncService');
