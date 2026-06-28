@@ -76,6 +76,19 @@ const updateCustomer = async (req, res, next) => {
 // DELETE /api/customers/:id
 const deleteCustomer = async (req, res, next) => {
   try {
+    const Invoice = require('../models/Invoice');
+    const activeInvoices = await Invoice.countDocuments({
+      customer: req.params.id,
+      company: req.companyId,
+      status: { $in: ['Credit', 'Overdue', 'Pending'] }
+    });
+    if (activeInvoices > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete customer with ${activeInvoices} active invoice(s). Settle or cancel them first.`
+      });
+    }
+
     const customer = await Customer.findOneAndUpdate(
       { _id: req.params.id, company: req.companyId },
       { isActive: false },
