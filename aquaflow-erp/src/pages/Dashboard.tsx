@@ -4,7 +4,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   ShoppingCart, Package, AlertTriangle, Users, TrendingUp,
-  DollarSign, Calendar, RefreshCw
+  DollarSign, Calendar, RefreshCw, Wallet, ArrowUpRight, Percent, PiggyBank
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -97,6 +97,30 @@ export default function Dashboard() {
   const dashboardSource = realTimeData || dashData;
   const kpis = dashboardSource?.kpis;
   const recentSales = dashboardSource?.recentSales || [];
+
+  const fm = kpis?.financialMetrics || {
+    cashInHand: 0,
+    bankAccounts: 0,
+    currentAssets: 0,
+    currentLiabilities: 0,
+    workingCapital: 0,
+    capitalAccount: 0,
+    loansLiability: 0,
+    receivables: 0,
+    payables: 0
+  };
+
+  const currentRatio = fm.currentLiabilities > 0 
+    ? `${(fm.currentAssets / fm.currentLiabilities).toFixed(2)} : 1` 
+    : (fm.currentAssets > 0 ? "Dr (No Liabilities)" : "0.00 : 1");
+    
+  const quickRatio = fm.currentLiabilities > 0 
+    ? `${((fm.currentAssets - fm.cashInHand) / fm.currentLiabilities).toFixed(2)} : 1` 
+    : (fm.currentAssets > 0 ? "Dr (No Liabilities)" : "0.00 : 1");
+
+  const debtEquityRatio = fm.capitalAccount > 0 
+    ? `${(fm.loansLiability / fm.capitalAccount).toFixed(2)} : 1` 
+    : "0.00 : 1";
 
   const salesTrend = (trendData || []).map((item: any) => ({
     month: item._id.month ? monthNames[item._id.month - 1] : '',
@@ -298,6 +322,121 @@ export default function Dashboard() {
           </ul>
         </div>
       </div>
+
+      {/* Tally Prime Financial Overview Section */}
+      {kpis?.financialMetrics && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="h-6 w-1 rounded bg-brand" />
+            <h2 className="font-display text-base font-bold text-foreground">Tally Prime Financial Overview</h2>
+            <span className="text-xs text-muted-foreground">• Synced from Tally Prime</span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {/* Cash/Bank Accounts */}
+            <div className="bg-surface rounded-xl border border-border p-4 md:p-5 shadow-card">
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-brand" />
+                  <h3 className="text-sm font-semibold text-foreground">Cash/Bank Accounts</h3>
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">Closing Balance</span>
+              </div>
+              <div className="space-y-2.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">Cash-in-Hand</span>
+                  <span className="font-medium text-foreground">₹{fm.cashInHand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">Bank Accounts</span>
+                  <span className="font-medium text-foreground">₹{fm.bankAccounts.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2.5 border-t border-dashed border-border text-sm font-bold">
+                  <span className="text-foreground">Total Cash/Bank</span>
+                  <span className="text-brand font-display font-semibold">₹{(fm.cashInHand + fm.bankAccounts).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Receivables & Payables */}
+            <div className="bg-surface rounded-xl border border-border p-4 md:p-5 shadow-card">
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <ArrowUpRight className="w-4 h-4 text-brand" />
+                  <h3 className="text-sm font-semibold text-foreground">Receivables/Payables</h3>
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">Outstanding</span>
+              </div>
+              <div className="space-y-2.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">Receivables (Debtors)</span>
+                  <span className="font-medium text-foreground">₹{fm.receivables.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">Payables (Creditors)</span>
+                  <span className="font-medium text-foreground">₹{fm.payables.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2.5 border-t border-dashed border-border text-sm font-bold">
+                  <span className="text-foreground">Net Balance</span>
+                  <span className={`font-display font-semibold ${fm.receivables >= fm.payables ? "text-success" : "text-destructive"}`}>
+                    ₹{Math.abs(fm.receivables - fm.payables).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {fm.receivables >= fm.payables ? "Dr" : "Cr"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Assets & Liabilities */}
+            <div className="bg-surface rounded-xl border border-border p-4 md:p-5 shadow-card">
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <PiggyBank className="w-4 h-4 text-brand" />
+                  <h3 className="text-sm font-semibold text-foreground">Assets & Liabilities</h3>
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">Balance</span>
+              </div>
+              <div className="space-y-2.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">Current Assets</span>
+                  <span className="font-medium text-foreground">₹{fm.currentAssets.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">Current Liabilities</span>
+                  <span className="font-medium text-foreground">₹{fm.currentLiabilities.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2.5 border-t border-dashed border-border text-sm font-bold">
+                  <span className="text-foreground">Working Capital</span>
+                  <span className="text-brand font-display font-semibold">₹{fm.workingCapital.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Ratio Analysis */}
+            <div className="bg-surface rounded-xl border border-border p-4 md:p-5 shadow-card">
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Percent className="w-4 h-4 text-brand" />
+                  <h3 className="text-sm font-semibold text-foreground">Ratio Analysis</h3>
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">Ratios</span>
+              </div>
+              <div className="space-y-2.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">Current Ratio</span>
+                  <span className="font-medium text-foreground">{currentRatio}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">Quick Ratio</span>
+                  <span className="font-medium text-foreground">{quickRatio}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2.5 border-t border-dashed border-border text-sm font-bold">
+                  <span className="text-foreground">Debt/Equity Ratio</span>
+                  <span className="text-foreground font-display font-semibold">{debtEquityRatio}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 md:gap-4">
         {/* Top Products */}

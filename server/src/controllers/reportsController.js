@@ -2,6 +2,7 @@ const Invoice = require('../models/Invoice');
 const Expense = require('../models/Expense');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
+const FinancialMetric = require('../models/FinancialMetric');
 const { emitDashboardUpdate, emitLowStockAlert } = require('../utils/websocket');
 
 // GET /api/reports/dashboard
@@ -37,6 +38,7 @@ const getDashboard = async (req, res, next) => {
       recentInvoices,
       overdueCount,
       lowStockProducts,
+      financialMetrics,
     ] = await Promise.all([
       Invoice.aggregate([
         { $match: { company: companyId, status: { $in: ['Paid', 'Credit'] }, createdAt: { $gte: startDate } } },
@@ -59,6 +61,7 @@ const getDashboard = async (req, res, next) => {
         .limit(5),
       Invoice.countDocuments({ company: companyId, status: 'Overdue' }),
       Product.find({ company: companyId, isActive: true, $expr: { $lt: ['$stock', '$lowStockThreshold'] } }).limit(10),
+      FinancialMetric.findOne({ company: companyId }),
     ]);
 
     const currentTotal = currentSales[0]?.total || 0;
@@ -75,6 +78,17 @@ const getDashboard = async (req, res, next) => {
           customers: { value: totalCustomers },
           expenses: { value: totalExpenses[0]?.total || 0 },
           overdue: { value: overdueCount },
+          financialMetrics: financialMetrics || {
+            cashInHand: 0,
+            bankAccounts: 0,
+            currentAssets: 0,
+            currentLiabilities: 0,
+            workingCapital: 0,
+            capitalAccount: 0,
+            loansLiability: 0,
+            receivables: 0,
+            payables: 0
+          }
         },
         recentSales: recentInvoices,
       },

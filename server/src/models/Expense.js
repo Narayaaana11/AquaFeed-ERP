@@ -63,11 +63,16 @@ const expenseSchema = new mongoose.Schema(
       ref: 'Company',
       required: true,
     },
+    tallyGuid: {
+      type: String,
+      sparse: true,
+    },
   },
   { timestamps: true }
 );
 
 expenseSchema.index({ company: 1, date: -1 });
 expenseSchema.index({ company: 1, category: 1 });
+expenseSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, partialFilterExpression: { tallyGuid: { $type: "string" } } });
 
 module.exports = mongoose.model('Expense', expenseSchema);

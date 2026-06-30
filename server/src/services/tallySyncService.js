@@ -10,6 +10,8 @@ const PurchaseOrder = require('../models/PurchaseOrder');
 const User = require('../models/User');
 const CreditNote = require('../models/CreditNote');
 const Quotation = require('../models/Quotation');
+const Expense = require('../models/Expense');
+const FinancialMetric = require('../models/FinancialMetric');
 
 let isSyncRunning = false;
 let syncIntervalId = null;
@@ -254,6 +256,63 @@ async function executeQuery(connection, queryStr, params = []) {
     if (normalized.includes('FROM config')) {
       return await connection.collection('config').find({}).toArray();
     }
+
+    // 9.5. Ledgers and groups query for Financial Metrics
+    if (normalized.includes('SELECT l.name, l.parent, g.primary_group')) {
+      return await connection.collection('mst_ledger').aggregate([
+        {
+          $lookup: {
+            from: 'mst_group',
+            localField: 'parent',
+            foreignField: 'name',
+            as: 'group'
+          }
+        },
+        {
+          $unwind: { path: '$group', preserveNullAndEmptyArrays: true }
+        },
+        {
+          $project: {
+            name: 1,
+            parent: 1,
+            primary_group: '$group.primary_group',
+            group_parent: '$group.parent',
+            closing_balance: 1
+          }
+        }
+      ]).toArray();
+    }
+
+    // 9.6. Expense ledgers query
+    if (normalized.includes("IN ('Direct Expenses', 'Indirect Expenses')")) {
+      return await connection.collection('mst_ledger').aggregate([
+        {
+          $lookup: {
+            from: 'mst_group',
+            localField: 'parent',
+            foreignField: 'name',
+            as: 'group'
+          }
+        },
+        {
+          $unwind: { path: '$group', preserveNullAndEmptyArrays: true }
+        },
+        {
+          $match: {
+            $or: [
+              { parent: { $in: ['Direct Expenses', 'Indirect Expenses'] } },
+              { 'group.primary_group': { $in: ['Direct Expenses', 'Indirect Expenses'] } },
+              { 'group.parent': { $in: ['Direct Expenses', 'Indirect Expenses'] } }
+            ]
+          }
+        },
+        {
+          $project: {
+            name: 1
+          }
+        }
+      ]).toArray();
+    }
     
     return [];
   }
@@ -289,7 +348,7 @@ async function executeQuery(connection, queryStr, params = []) {
  * so that compound unique indexes { company: 1, tallyGuid: 1 } can be created
  */
 async function ensureCompoundIndexes() {
-  const models = [Warehouse, Customer, Supplier, Product, Invoice, PurchaseOrder];
+  const models = [Warehouse, Customer, Supplier, Product, Invoice, PurchaseOrder, Expense, CreditNote, Quotation];
   for (const model of models) {
     try {
       await model.collection.dropIndex('tallyGuid_1');
@@ -298,6 +357,38 @@ async function ensureCompoundIndexes() {
       // index might not exist or already dropped, ignore
     }
   }
+}
+
+/**
+ * Maps a Tally Ledger name to one of the ERP's supported Expense Categories
+ */
+function mapLedgerToExpenseCategory(ledgerName) {
+  const name = ledgerName.toLowerCase();
+  if (name.includes('salary') || name.includes('wage') || name.includes('staff') || name.includes('employee')) {
+    return 'Staff Salary';
+  }
+  if (name.includes('transport') || name.includes('freight') || name.includes('carriage') || name.includes('delivery') || name.includes('cartage') || name.includes('loading') || name.includes('coolie')) {
+    return 'Transport';
+  }
+  if (name.includes('packaging') || name.includes('packing') || name.includes('box') || name.includes('bag')) {
+    return 'Packaging';
+  }
+  if (name.includes('electricity') || name.includes('power') || name.includes('light') || name.includes('eb bill')) {
+    return 'Electricity';
+  }
+  if (name.includes('rent') || name.includes('lease') || name.includes('office rent')) {
+    return 'Rent';
+  }
+  if (name.includes('repair') || name.includes('service') || name.includes('fixing') || name.includes('mechanic')) {
+    return 'Repairs';
+  }
+  if (name.includes('maintenance') || name.includes('cleaning') || name.includes('upkeep') || name.includes('sanitation')) {
+    return 'Maintenance';
+  }
+  if (name.includes('marketing') || name.includes('ad ') || name.includes('advertis') || name.includes('promotion') || name.includes('banner')) {
+    return 'Marketing';
+  }
+  return 'Other';
 }
 
 /**
@@ -326,6 +417,7 @@ async function syncTallyData(targetCompanyId = null) {
     purchaseBills: 0,
     creditNotes: 0,
     quotations: 0,
+    expenses: 0,
     startTime: new Date()
   };
 
@@ -1047,6 +1139,156 @@ async function syncTallyData(targetCompanyId = null) {
         console.error(`Error processing Sales Order voucher ${v.guid}:`, err.message);
       }
     }
+
+    // 13. Sync Expenses (Payment Vouchers representing expenses)
+    console.log('🔄 Syncing Expenses (Payment Vouchers)...');
+    try {
+      const expenseLedgerRows = await executeQuery(
+        connection,
+        `SELECT l.name 
+         FROM mst_ledger l
+         LEFT JOIN mst_group g ON l.parent = g.name
+         WHERE l.parent IN ('Direct Expenses', 'Indirect Expenses') 
+            OR g.primary_group IN ('Direct Expenses', 'Indirect Expenses') 
+            OR g.parent IN ('Direct Expenses', 'Indirect Expenses')`
+      );
+      const expenseLedgerNames = new Set(expenseLedgerRows.map(r => r.name));
+
+      const paymentVouchers = await executeQuery(
+        connection,
+        `SELECT guid, date, voucher_type, voucher_number, reference_number, reference_date, narration, party_name 
+         FROM trn_voucher 
+         WHERE voucher_type = 'Payment' OR voucher_type IN (SELECT name FROM mst_vouchertype WHERE parent = 'Payment')`
+      );
+
+      for (const v of paymentVouchers) {
+        try {
+          const accRows = await executeQuery(connection, 'SELECT ledger, amount FROM trn_accounting WHERE guid = ?', [v.guid]);
+          
+          let expenseLedgerName = null;
+          let amount = 0;
+          let paymentMethod = 'Cash'; // Default
+          
+          for (const acc of accRows) {
+            const accAmount = Math.abs(parseFloat(acc.amount) || 0);
+            const ledgerUpper = acc.ledger.toUpperCase();
+            
+            if (expenseLedgerNames.has(acc.ledger)) {
+              expenseLedgerName = acc.ledger;
+              amount = accAmount;
+            }
+            
+            if (ledgerUpper.includes('CASH')) {
+              paymentMethod = 'Cash';
+            } else if (ledgerUpper.includes('BANK') || ledgerUpper.includes('SBI') || ledgerUpper.includes('HDFC') || ledgerUpper.includes('ICICI')) {
+              paymentMethod = 'Bank Transfer';
+            } else if (ledgerUpper.includes('UPI')) {
+              paymentMethod = 'UPI';
+            } else if (ledgerUpper.includes('CHEQUE')) {
+              paymentMethod = 'Cheque';
+            }
+          }
+
+          if (expenseLedgerName && amount > 0) {
+            const category = mapLedgerToExpenseCategory(expenseLedgerName);
+            await Expense.findOneAndUpdate(
+              { tallyGuid: v.guid, company: companyId },
+              {
+                $set: {
+                  category,
+                  amount,
+                  description: v.narration || `Tally Expense: ${expenseLedgerName}`,
+                  date: new Date(v.date),
+                  paymentMethod,
+                  reference: v.reference_number || v.voucher_number || '',
+                  status: 'Approved',
+                  company: companyId
+                }
+              },
+              { upsert: true }
+            );
+            stats.expenses++;
+          }
+        } catch (voucherErr) {
+          console.error(`Error processing Payment voucher ${v.guid}:`, voucherErr.message);
+        }
+      }
+    } catch (expErr) {
+      console.error('Error during Expense sync:', expErr.message);
+    }
+
+    // 14. Sync Financial Metrics (General Ledger Balances & Ratios)
+    console.log('🔄 Syncing Financial Metrics...');
+    try {
+      const ledgers = await executeQuery(
+        connection,
+        `SELECT l.name, l.parent, g.primary_group, g.parent as group_parent, l.closing_balance 
+         FROM mst_ledger l
+         LEFT JOIN mst_group g ON l.parent = g.name`
+      );
+
+      let cashInHand = 0;
+      let bankAccounts = 0;
+      let currentAssets = 0;
+      let currentLiabilities = 0;
+      let capitalAccount = 0;
+      let loansLiability = 0;
+      let receivables = 0;
+      let payables = 0;
+
+      for (const r of ledgers) {
+        const balance = parseFloat(r.closing_balance) || 0;
+        const parent = r.parent || '';
+        const primaryGroup = r.primary_group || '';
+        const groupParent = r.group_parent || '';
+
+        const isCash = parent === 'Cash-in-Hand' || primaryGroup === 'Cash-in-Hand' || groupParent === 'Cash-in-Hand';
+        const isBank = ['Bank Accounts', 'Bank OCC A/c', 'Bank OD A/c'].includes(parent) || 
+                       ['Bank Accounts', 'Bank OCC A/c', 'Bank OD A/c'].includes(primaryGroup) ||
+                       ['Bank Accounts', 'Bank OD A/c', 'Bank OCC A/c'].includes(groupParent);
+        const isCurrentAsset = parent === 'Current Assets' || primaryGroup === 'Current Assets' || groupParent === 'Current Assets' || isCash || isBank;
+        const isCurrentLiability = parent === 'Current Liabilities' || primaryGroup === 'Current Liabilities' || groupParent === 'Current Liabilities';
+        const isCapital = parent === 'Capital Account' || primaryGroup === 'Capital Account' || groupParent === 'Capital Account';
+        const isLoanLiab = ['Loans (Liability)', 'Secured Loans', 'Unsecured Loans'].includes(parent) || 
+                           ['Loans (Liability)', 'Secured Loans', 'Unsecured Loans'].includes(primaryGroup) ||
+                           ['Loans (Liability)', 'Secured Loans', 'Unsecured Loans'].includes(groupParent);
+        const isReceivable = parent === 'Sundry Debtors' || primaryGroup === 'Sundry Debtors' || groupParent === 'Sundry Debtors';
+        const isPayable = parent === 'Sundry Creditors' || primaryGroup === 'Sundry Creditors' || groupParent === 'Sundry Creditors';
+
+        if (isCash) cashInHand += Math.abs(balance);
+        if (isBank) bankAccounts += Math.abs(balance);
+        if (isCurrentAsset) currentAssets += Math.abs(balance);
+        if (isCurrentLiability) currentLiabilities += Math.abs(balance);
+        if (isCapital) capitalAccount += Math.abs(balance);
+        if (isLoanLiab) loansLiability += Math.abs(balance);
+        if (isReceivable) receivables += Math.abs(balance);
+        if (isPayable) payables += Math.abs(balance);
+      }
+
+      const workingCapital = currentAssets - currentLiabilities;
+
+      await FinancialMetric.findOneAndUpdate(
+        { company: companyId },
+        {
+          $set: {
+            cashInHand,
+            bankAccounts,
+            currentAssets,
+            currentLiabilities,
+            workingCapital,
+            capitalAccount,
+            loansLiability,
+            receivables,
+            payables,
+            lastSynced: new Date()
+          }
+        },
+        { upsert: true }
+      );
+    } catch (metricErr) {
+      console.error('Error during Financial Metrics calculation:', metricErr.message);
+    }
+
     } // End of stagingDbs loop
 
     const duration = ((new Date() - stats.startTime) / 1000).toFixed(1);
