@@ -23,6 +23,7 @@ interface POFormData {
   warehouseId?: string;
   expectedDate?: string;
   notes?: string;
+  date?: string;
   items: { productId: string; quantity: number; unitCost: number }[];
 }
 
@@ -61,7 +62,10 @@ export default function PurchaseOrders() {
   const { data: warehouses = [] } = useWarehouses();
 
   const { register, control, handleSubmit, reset, watch, formState: { errors } } = useForm<POFormData>({
-    defaultValues: { items: [{ productId: "", quantity: 1, unitCost: 0 }] },
+    defaultValues: { 
+      date: new Date().toISOString().split("T")[0],
+      items: [{ productId: "", quantity: 1, unitCost: 0 }] 
+    },
   });
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
   const watchedItems = watch("items");
@@ -145,7 +149,7 @@ export default function PurchaseOrders() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{r.supplierName}</p>
-                  <p className="text-xs text-muted-foreground">{r.warehouse?.name || "—"} · {new Date(r.createdAt).toLocaleDateString("en-IN")}</p>
+                  <p className="text-xs text-muted-foreground">{r.warehouse?.name || "—"} · {new Date(r.date || r.createdAt).toLocaleDateString("en-IN")}</p>
                 </div>
                 <span className={`px-2.5 py-1 rounded-full text-xs font-medium shrink-0 ${PO_STATUS_COLORS[r.status] || "bg-secondary text-foreground"}`}>{r.status}</span>
               </div>
@@ -222,11 +226,11 @@ export default function PurchaseOrders() {
               ),
             },
             {
-              key: "createdAt",
-              header: "Created",
+              key: "date",
+              header: "Date",
               cell: (r) => (
                 <span className="text-xs text-muted-foreground">
-                  {new Date(r.createdAt).toLocaleDateString("en-IN")}
+                  {new Date(r.date || r.createdAt).toLocaleDateString("en-IN")}
                 </span>
               ),
             },
@@ -294,6 +298,18 @@ export default function PurchaseOrders() {
                     ))}
                   </select>
                   {errors.supplierId && <p className="text-xs text-destructive mt-1">{errors.supplierId.message}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                    Order Date *
+                  </label>
+                  <input
+                    type="date"
+                    {...register("date", { required: "Order date is required" })}
+                    className="w-full h-11 px-3 rounded-lg border border-border bg-surface text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/50"
+                  />
+                  {errors.date && <p className="text-xs text-destructive mt-1">{errors.date.message}</p>}
                 </div>
 
                 <div>

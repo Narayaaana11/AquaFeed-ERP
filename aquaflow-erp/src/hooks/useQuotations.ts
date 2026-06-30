@@ -29,6 +29,7 @@ export interface Quotation {
   status: 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Converted';
   validUntil?: string;
   notes?: string;
+  date?: string;
   createdAt: string;
 }
 

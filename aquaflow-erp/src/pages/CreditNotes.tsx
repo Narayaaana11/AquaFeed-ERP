@@ -80,7 +80,7 @@ export default function CreditNotes() {
                     <span className="font-display font-bold text-foreground font-mono text-xs">{r.creditNoteNumber}</span>
                   </div>
                   <p className="font-display font-semibold text-sm text-foreground">{r.customerName}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Invoice: {r.originalInvoiceNumber} · {new Date(r.createdAt).toLocaleDateString("en-IN")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Invoice: {r.originalInvoiceNumber} · {new Date(r.date || r.createdAt).toLocaleDateString("en-IN")}</p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="font-display font-bold text-sm text-warning">₹{r.totalAmount.toLocaleString("en-IN")}</p>
@@ -149,11 +149,11 @@ export default function CreditNotes() {
               ),
             },
             {
-              key: "createdAt",
+              key: "date",
               header: "Date",
               cell: (r) => (
                 <span className="text-xs text-muted-foreground">
-                  {new Date(r.createdAt).toLocaleDateString("en-IN")}
+                  {new Date(r.date || r.createdAt).toLocaleDateString("en-IN")}
                 </span>
               ),
             },
@@ -202,7 +202,7 @@ export default function CreditNotes() {
               <div>
                 <p className="text-xs text-muted-foreground">Date Issued</p>
                 <p className="font-medium text-sm text-foreground">
-                  {new Date(selected.createdAt).toLocaleDateString("en-IN")}
+                  {new Date(selected.date || selected.createdAt).toLocaleDateString("en-IN")}
                 </p>
               </div>
               <div className="col-span-1 sm:col-span-2">

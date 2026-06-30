@@ -734,6 +734,7 @@ async function syncTallyData(targetCompanyId = null) {
             paidAmount,
             paymentType,
             status,
+            date: new Date(v.date),
             dueDate: new Date(v.date),
             notes: v.narration || '',
             warehouse: defaultWarehouse ? defaultWarehouse._id : null,
@@ -805,6 +806,7 @@ async function syncTallyData(targetCompanyId = null) {
             subtotal,
             totalAmount: subtotal,
             status: 'Ordered',
+            date: new Date(v.date),
             expectedDate: new Date(v.date),
             notes: v.narration || '',
             warehouse: defaultWarehouse ? defaultWarehouse._id : null,
@@ -966,6 +968,7 @@ async function syncTallyData(targetCompanyId = null) {
                 subtotal,
                 totalAmount: subtotal,
                 status: 'Received',
+                date: new Date(v.date),
                 expectedDate: new Date(v.date),
                 receivedDate: new Date(v.date),
                 notes: v.narration || '',
@@ -1040,6 +1043,7 @@ async function syncTallyData(targetCompanyId = null) {
                 reason: v.narration || 'Synced from Tally',
                 totalAmount,
                 status: 'Issued',
+                date: new Date(v.date),
                 warehouse: defaultWarehouse ? defaultWarehouse._id : null,
                 company: companyId
               }
@@ -1127,6 +1131,7 @@ async function syncTallyData(targetCompanyId = null) {
               gstAmount,
               total: totalAmount,
               status: 'Sent',
+              date: new Date(v.date),
               validUntil: new Date(new Date(v.date).getTime() + 30 * 24 * 60 * 60 * 1000), // +30 days
               notes: v.narration || '',
               company: companyId

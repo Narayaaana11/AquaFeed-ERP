@@ -25,6 +25,7 @@ export interface PurchaseOrder {
   notes?: string;
   warehouse: { _id: string; name: string };
   tallyGuid?: string;
+  date?: string;
   createdAt: string;
 }
 

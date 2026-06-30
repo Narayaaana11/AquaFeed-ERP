@@ -41,11 +41,11 @@ const getDashboard = async (req, res, next) => {
       financialMetrics,
     ] = await Promise.all([
       Invoice.aggregate([
-        { $match: { company: companyId, status: { $in: ['Paid', 'Credit'] }, createdAt: { $gte: startDate } } },
+        { $match: { company: companyId, status: { $in: ['Paid', 'Credit'] }, date: { $gte: startDate } } },
         { $group: { _id: null, total: { $sum: '$total' }, count: { $sum: 1 } } },
       ]),
       Invoice.aggregate([
-        { $match: { company: companyId, status: { $in: ['Paid', 'Credit'] }, createdAt: { $gte: prevStartDate, $lt: startDate } } },
+        { $match: { company: companyId, status: { $in: ['Paid', 'Credit'] }, date: { $gte: prevStartDate, $lt: startDate } } },
         { $group: { _id: null, total: { $sum: '$total' } } },
       ]),
       Product.countDocuments({ company: companyId, isActive: true }),
@@ -57,7 +57,7 @@ const getDashboard = async (req, res, next) => {
       ]),
       Invoice.find({ company: companyId })
         .populate('customer', 'name')
-        .sort({ createdAt: -1 })
+        .sort({ date: -1, createdAt: -1 })
         .limit(5),
       Invoice.countDocuments({ company: companyId, status: 'Overdue' }),
       Product.find({ company: companyId, isActive: true, $expr: { $lt: ['$stock', '$lowStockThreshold'] } }).limit(10),
@@ -119,22 +119,22 @@ const getSalesTrend = async (req, res, next) => {
     let groupBy, matchFrom;
     if (range === 'week') {
       matchFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-      groupBy = { year: { $year: '$createdAt' }, month: { $month: '$createdAt' }, day: { $dayOfMonth: '$createdAt' } };
+      groupBy = { year: { $year: '$date' }, month: { $month: '$date' }, day: { $dayOfMonth: '$date' } };
     } else if (range === 'month') {
       matchFrom = new Date(now.getFullYear(), now.getMonth(), 1);
-      groupBy = { year: { $year: '$createdAt' }, month: { $month: '$createdAt' }, day: { $dayOfMonth: '$createdAt' } };
+      groupBy = { year: { $year: '$date' }, month: { $month: '$date' }, day: { $dayOfMonth: '$date' } };
     } else if (range === '3months') {
       matchFrom = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-      groupBy = { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } };
+      groupBy = { year: { $year: '$date' }, month: { $month: '$date' } };
     } else if (range === '6months') {
       matchFrom = new Date(now.getFullYear(), now.getMonth() - 6, 1);
-      groupBy = { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } };
+      groupBy = { year: { $year: '$date' }, month: { $month: '$date' } };
     } else if (range === '12months') {
       matchFrom = new Date(now.getFullYear(), now.getMonth() - 12, 1);
-      groupBy = { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } };
+      groupBy = { year: { $year: '$date' }, month: { $month: '$date' } };
     } else {
       matchFrom = new Date(now.getFullYear(), 0, 1);
-      groupBy = { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } };
+      groupBy = { year: { $year: '$date' }, month: { $month: '$date' } };
     }
 
     const salesTrendPromise = Invoice.aggregate([
@@ -142,7 +142,7 @@ const getSalesTrend = async (req, res, next) => {
         $match: {
           company: companyId,
           status: { $in: ['Paid', 'Credit'] },
-          createdAt: { $gte: matchFrom },
+          date: { $gte: matchFrom },
         },
       },
       {
@@ -233,7 +233,7 @@ const getTopProducts = async (req, res, next) => {
     const matchFrom = from ? new Date(from) : new Date(new Date().getFullYear(), 0, 1);
 
     const top = await Invoice.aggregate([
-      { $match: { company: companyId, status: { $in: ['Paid', 'Credit'] }, createdAt: { $gte: matchFrom } } },
+      { $match: { company: companyId, status: { $in: ['Paid', 'Credit'] }, date: { $gte: matchFrom } } },
       { $unwind: '$items' },
       {
         $group: {
@@ -331,19 +331,19 @@ const exportCSV = async (req, res, next) => {
     const { type = 'sales', from, to } = req.query;
     const companyId = req.companyId;
     const match = { company: companyId };
-    if (from) match.createdAt = { $gte: new Date(from) };
-    if (to) match.createdAt = { ...match.createdAt, $lte: new Date(to + 'T23:59:59.999Z') };
+    if (from) match.date = { $gte: new Date(from) };
+    if (to) match.date = { ...match.date, $lte: new Date(to + 'T23:59:59.999Z') };
 
     let rows = [];
     let headers = [];
 
     if (type === 'sales') {
-      const invoices = await Invoice.find(match).sort({ createdAt: -1 });
+      const invoices = await Invoice.find(match).sort({ date: -1, createdAt: -1 });
       headers = ['Invoice No', 'Customer', 'Date', 'Subtotal', 'GST', 'Total', 'Payment Type', 'Status'];
       rows = invoices.map((inv) => [
         inv.invoiceNumber,
         inv.customerName,
-        inv.createdAt.toLocaleDateString('en-IN'),
+        (inv.date || inv.createdAt).toLocaleDateString('en-IN'),
         inv.subtotal,
         inv.gstAmount,
         inv.total,
@@ -352,9 +352,6 @@ const exportCSV = async (req, res, next) => {
       ]);
     } else if (type === 'expenses') {
       match.status = 'Approved';
-      if (from) match.date = { $gte: new Date(from) };
-      if (to) match.date = { ...match.date, $lte: new Date(to + 'T23:59:59.999Z') };
-      delete match.createdAt;
       const expenses = await Expense.find(match).sort({ date: -1 });
       headers = ['Date', 'Category', 'Description', 'Amount', 'Payment Method', 'Status'];
       rows = expenses.map((e) => [
@@ -390,13 +387,13 @@ const getProfitLoss = async (req, res, next) => {
 
     // Revenue = sum of all non-cancelled invoices in range
     const revenueResult = await Invoice.aggregate([
-      { $match: { company: companyId, status: { $in: ['Paid', 'Credit', 'Overdue', 'Pending'] }, createdAt: dateFilter } },
+      { $match: { company: companyId, status: { $in: ['Paid', 'Credit', 'Overdue', 'Pending'] }, date: dateFilter } },
       { $group: { _id: null, total: { $sum: '$total' }, subtotal: { $sum: '$subtotal' }, gstTotal: { $sum: '$gstAmount' } } },
     ]);
 
     // COGS using purchasePrice from Product
     const cogsResult = await Invoice.aggregate([
-      { $match: { company: companyId, status: { $in: ['Paid', 'Credit', 'Overdue', 'Pending'] }, createdAt: dateFilter } },
+      { $match: { company: companyId, status: { $in: ['Paid', 'Credit', 'Overdue', 'Pending'] }, date: dateFilter } },
       { $unwind: '$items' },
       {
         $lookup: {

@@ -32,7 +32,7 @@ const getPOs = async (req, res, next) => {
       PurchaseOrder.find(query)
         .populate('supplier', 'name phone')
         .populate('warehouse', 'name')
-        .sort({ createdAt: -1 })
+        .sort({ date: -1, createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
       PurchaseOrder.countDocuments(query),
@@ -65,7 +65,7 @@ const createPO = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { supplierId, warehouseId, items, expectedDate, notes } = req.body;
+    const { supplierId, warehouseId, items, expectedDate, notes, date } = req.body;
 
     const supplier = await Supplier.findOne({ _id: supplierId, company: req.companyId }).session(session);
     if (!supplier) {
@@ -127,6 +127,7 @@ const createPO = async (req, res, next) => {
       status: 'Ordered',
       expectedDate: expectedDate ? new Date(expectedDate) : undefined,
       notes,
+      date: date || new Date(),
       warehouse: targetWarehouseId,
       createdBy: req.user._id,
       company: req.companyId,

@@ -27,12 +27,15 @@ const quotationSchema = new mongoose.Schema({
   validUntil: { type: Date },
   notes: { type: String },
   convertedInvoice: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
-  tallyGuid: { type: String, sparse: true }
+  tallyGuid: { type: String, sparse: true },
+  date: { type: Date, required: true, default: Date.now }
 }, {
   timestamps: true
 });
 
 quotationSchema.index({ company: 1, quotationNumber: 1 }, { unique: true });
 quotationSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, partialFilterExpression: { tallyGuid: { $type: "string" } } });
+quotationSchema.index({ company: 1, date: -1 });
+quotationSchema.index({ company: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Quotation', quotationSchema);

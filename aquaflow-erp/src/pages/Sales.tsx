@@ -25,6 +25,7 @@ interface CreateInvoiceFormData {
   notes: string;
   paidAmount?: number;
   warehouseId?: string;
+  date?: string;
   items: { productId: string; quantity: number; unitPrice: number }[];
 }
 
@@ -84,6 +85,7 @@ export default function Sales() {
         paymentType: "Cash",
         notes: "",
         paidAmount: undefined,
+        date: new Date().toISOString().split("T")[0],
         items: [{ productId: "", quantity: 1, unitPrice: 0 }],
       },
     });
@@ -125,6 +127,7 @@ export default function Sales() {
         notes: data.notes,
         paidAmount: data.paymentType === 'Split' ? data.paidAmount : undefined,
         warehouseId: data.warehouseId,
+        date: data.date,
         items: validItems.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -274,7 +277,7 @@ export default function Sales() {
                       )}
                     </div>
                     <p className="font-display font-semibold text-sm text-foreground truncate">{r.customerName}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{new Date(r.createdAt).toLocaleDateString("en-IN")} · {r.paymentType}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{new Date(r.date || r.createdAt).toLocaleDateString("en-IN")} · {r.paymentType}</p>
                   </div>
                   <StatusBadge status={r.status} variant="payment" />
                 </div>
@@ -323,9 +326,9 @@ export default function Sales() {
               cell: (r) => <span className="text-foreground">{r.customerName}</span>,
             },
             {
-              key: "createdAt",
+              key: "date",
               header: "Date",
-              cell: (r) => <span className="text-muted-foreground text-xs">{new Date(r.createdAt).toLocaleDateString("en-IN")}</span>,
+              cell: (r) => <span className="text-muted-foreground text-xs">{new Date(r.date || r.createdAt).toLocaleDateString("en-IN")}</span>,
             },
             {
               key: "total",
@@ -393,6 +396,17 @@ export default function Sales() {
 
             <form onSubmit={handleSubmit(onCreateSubmit)} className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-display font-medium text-foreground">Date <span className="text-destructive">*</span></label>
+                  <input
+                    type="date"
+                    {...register("date", { required: true })}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/50"
+                  />
+                  {errors.date && (
+                    <p className="text-xs text-destructive">{errors.date.message}</p>
+                  )}
+                </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-display font-medium text-foreground">Customer <span className="text-destructive">*</span></label>
                   <Popover open={isCustomerComboboxOpen} onOpenChange={setIsCustomerComboboxOpen}>
@@ -602,7 +616,7 @@ export default function Sales() {
               <div>
                 <h2 className="font-display font-bold text-lg text-foreground">Invoice Details</h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {selectedInvoice.invoiceNumber} · {new Date(selectedInvoice.createdAt).toLocaleDateString("en-IN")}
+                  {selectedInvoice.invoiceNumber} · {new Date(selectedInvoice.date || selectedInvoice.createdAt).toLocaleDateString("en-IN")}
                 </p>
               </div>
               <button onClick={() => setIsViewOpen(false)} className="text-muted-foreground hover:text-foreground">

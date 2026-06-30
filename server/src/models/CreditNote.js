@@ -73,6 +73,11 @@ const creditNoteSchema = new mongoose.Schema(
       type: String,
       sparse: true,
     },
+    date: {
+      type: Date,
+      required: true,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );
@@ -81,5 +86,7 @@ creditNoteSchema.index({ company: 1, creditNoteNumber: 1 }, { unique: true });
 creditNoteSchema.index({ company: 1, customer: 1 });
 creditNoteSchema.index({ company: 1, originalInvoice: 1 });
 creditNoteSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, partialFilterExpression: { tallyGuid: { $type: "string" } } });
+creditNoteSchema.index({ company: 1, date: -1 });
+creditNoteSchema.index({ company: 1, createdAt: -1 });
 
 module.exports = mongoose.model('CreditNote', creditNoteSchema);

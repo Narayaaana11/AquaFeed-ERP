@@ -120,6 +120,11 @@ const invoiceSchema = new mongoose.Schema(
       type: String,
       sparse: true,
     },
+    date: {
+      type: Date,
+      required: true,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );
@@ -128,6 +133,7 @@ invoiceSchema.index({ company: 1, invoiceNumber: 1 }, { unique: true });
 invoiceSchema.index({ company: 1, status: 1 });
 invoiceSchema.index({ company: 1, customer: 1 });
 invoiceSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, partialFilterExpression: { tallyGuid: { $type: "string" } } });
+invoiceSchema.index({ company: 1, date: -1 });
 invoiceSchema.index({ company: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

@@ -134,7 +134,7 @@ const getCustomerLedger = async (req, res, next) => {
       customer: req.params.id,
       company: req.companyId,
       status: { $nin: ['Cancelled'] },
-    }).sort({ createdAt: 1 });
+    }).sort({ date: 1, createdAt: 1 });
 
     let runningBalance = 0;
     const entries = invoices.map((inv) => {
@@ -142,7 +142,7 @@ const getCustomerLedger = async (req, res, next) => {
       const credit = inv.paidAmount || 0;
       runningBalance += debit - credit;
       return {
-        date: inv.createdAt,
+        date: inv.date || inv.createdAt,
         invoiceNumber: inv.invoiceNumber,
         type: inv.status,
         debit,

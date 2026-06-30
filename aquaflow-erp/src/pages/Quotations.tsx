@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 interface CreateQuotationFormData {
   customerId: string;
   notes: string;
+  date?: string;
   items: { productId: string; quantity: number; unitPrice: number }[];
 }
 
@@ -60,6 +61,7 @@ export default function Quotations() {
       defaultValues: {
         customerId: "",
         notes: "",
+        date: new Date().toISOString().split("T")[0],
         items: [{ productId: "", quantity: 1, unitPrice: 0 }],
       },
     });
@@ -89,6 +91,7 @@ export default function Quotations() {
       await createQuotation.mutateAsync({
         customerId: data.customerId,
         notes: data.notes,
+        date: data.date,
         items: validItems.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -190,7 +193,7 @@ export default function Quotations() {
             {
               key: "date",
               header: "Date",
-              cell: (q) => <span className="text-sm text-foreground">{new Date(q.createdAt).toLocaleDateString("en-IN")}</span>,
+              cell: (q) => <span className="text-sm text-foreground">{new Date(q.date || q.createdAt).toLocaleDateString("en-IN")}</span>,
             },
             {
               key: "quotationNumber",
@@ -241,7 +244,7 @@ export default function Quotations() {
                     <StatusBadge status={q.status} />
                   </div>
                   <p className="font-medium text-foreground text-sm">{q.customerName}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(q.createdAt).toLocaleDateString("en-IN")}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(q.date || q.createdAt).toLocaleDateString("en-IN")}</p>
                 </div>
                 <div className="text-right">
                   <span className="font-display font-bold text-foreground">₹{q.total.toLocaleString("en-IN")}</span>
@@ -276,6 +279,14 @@ export default function Quotations() {
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2">Customer Details</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2 flex flex-col">
+                    <label className="text-xs font-medium text-foreground">Date *</label>
+                    <input
+                      type="date"
+                      {...register("date", { required: true })}
+                      className="w-full h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground outline-none focus:border-brand"
+                    />
+                  </div>
                   <div className="space-y-2 flex flex-col">
                     <label className="text-xs font-medium text-foreground">Select Customer *</label>
                     <Popover open={isCustomerComboboxOpen} onOpenChange={setIsCustomerComboboxOpen}>
@@ -441,7 +452,7 @@ export default function Quotations() {
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Quotation No.</p>
                   <p className="font-display font-semibold text-foreground text-lg">{selectedQuotation.quotationNumber}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{new Date(selectedQuotation.createdAt).toLocaleDateString("en-IN")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{new Date(selectedQuotation.date || selectedQuotation.createdAt).toLocaleDateString("en-IN")}</p>
                 </div>
               </div>
 

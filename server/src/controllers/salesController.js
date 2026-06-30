@@ -32,16 +32,16 @@ const getInvoices = async (req, res, next) => {
     }
     if (status && status !== 'All') query.status = status;
     if (from || to) {
-      query.createdAt = {};
-      if (from) query.createdAt.$gte = new Date(from);
-      if (to) query.createdAt.$lte = new Date(to + 'T23:59:59.999Z');
+      query.date = {};
+      if (from) query.date.$gte = new Date(from);
+      if (to) query.date.$lte = new Date(to + 'T23:59:59.999Z');
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [invoices, total] = await Promise.all([
       Invoice.find(query)
         .populate('customer', 'name phone')
-        .sort({ createdAt: -1 })
+        .sort({ date: -1, createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
       Invoice.countDocuments(query),
@@ -72,7 +72,7 @@ const createInvoice = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { customerId, items, paymentType, notes, gstRate, paidAmount, warehouseId } = req.body;
+    const { customerId, items, paymentType, notes, gstRate, paidAmount, warehouseId, date } = req.body;
 
     const customer = await Customer.findOne({ _id: customerId, company: req.companyId }).session(session);
     if (!customer) {
@@ -201,6 +201,7 @@ const createInvoice = async (req, res, next) => {
       status,
       dueDate,
       notes,
+      date: date || new Date(),
       createdBy: req.user._id,
       company: req.companyId,
     }], { session });
@@ -392,7 +393,7 @@ const updateInvoice = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cannot edit a Paid or Cancelled invoice.' });
     }
 
-    const { items, notes, paymentType, gstRate, warehouseId } = req.body;
+    const { items, notes, paymentType, gstRate, warehouseId, date } = req.body;
     const targetWarehouseId = warehouseId || invoice.warehouse;
 
     // 1. Restore stock from old line items
@@ -501,6 +502,7 @@ const updateInvoice = async (req, res, next) => {
     invoice.warehouse = targetWarehouseId;
     if (notes !== undefined) invoice.notes = notes;
     if (paymentType) invoice.paymentType = paymentType;
+    if (date !== undefined) invoice.date = date;
 
     await invoice.save({ session });
 

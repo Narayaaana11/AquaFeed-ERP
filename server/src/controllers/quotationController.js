@@ -40,16 +40,16 @@ const getQuotations = async (req, res, next) => {
     }
     if (status && status !== 'All') query.status = status;
     if (from || to) {
-      query.createdAt = {};
-      if (from) query.createdAt.$gte = new Date(from);
-      if (to) query.createdAt.$lte = new Date(to + 'T23:59:59.999Z');
+      query.date = {};
+      if (from) query.date.$gte = new Date(from);
+      if (to) query.date.$lte = new Date(to + 'T23:59:59.999Z');
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [quotations, total] = await Promise.all([
       Quotation.find(query)
         .populate('customer', 'name phone')
-        .sort({ createdAt: -1 })
+        .sort({ date: -1, createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
       Quotation.countDocuments(query),
@@ -79,7 +79,7 @@ const createQuotation = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { customerId, items, notes, validUntil } = req.body;
+    const { customerId, items, notes, validUntil, date } = req.body;
 
     const customer = await Customer.findOne({ _id: customerId, company: req.companyId }).session(session);
     if (!customer) {
@@ -137,6 +137,7 @@ const createQuotation = async (req, res, next) => {
       status: 'Draft',
       validUntil,
       notes,
+      date: date || new Date(),
     }], { session });
 
     await session.commitTransaction();
@@ -163,7 +164,7 @@ const updateQuotation = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { items, notes, validUntil } = req.body;
+    const { items, notes, validUntil, date } = req.body;
     
     const quotation = await Quotation.findOne({ _id: req.params.id, company: req.companyId }).session(session);
     if (!quotation) {
@@ -217,6 +218,7 @@ const updateQuotation = async (req, res, next) => {
     quotation.total = total;
     if (notes !== undefined) quotation.notes = notes;
     if (validUntil !== undefined) quotation.validUntil = validUntil;
+    if (date !== undefined) quotation.date = date;
 
     await quotation.save({ session });
 

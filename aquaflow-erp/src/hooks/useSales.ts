@@ -41,6 +41,7 @@ export interface Invoice {
   dueDate?: string;
   notes?: string;
   tallyGuid?: string;
+  date?: string;
   createdAt: string;
 }
 

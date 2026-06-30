@@ -472,7 +472,7 @@ export default function Dashboard() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{s.customerName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {s.invoiceNumber} · {new Date(s.createdAt).toLocaleDateString("en-IN")}
+                      {s.invoiceNumber} · {new Date(s.date || s.createdAt).toLocaleDateString("en-IN")}
                     </p>
                   </div>
                   <div className="text-right shrink-0">

@@ -46,7 +46,7 @@ export default function InvoicePrint() {
 
   const balance = invoice.total - (invoice.paidAmount || 0);
   const isPaid = invoice.status === "Paid" || balance <= 0;
-  const invoiceDate = new Date(invoice.createdAt);
+  const invoiceDate = new Date(invoice.date || invoice.createdAt);
 
   return (
     <>

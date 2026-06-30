@@ -20,6 +20,7 @@ export interface CreditNote {
   reason: string;
   totalAmount: number;
   status: 'Issued' | 'Applied';
+  date?: string;
   createdAt: string;
 }
 

@@ -81,6 +81,11 @@ const purchaseOrderSchema = new mongoose.Schema(
       type: String,
       sparse: true,
     },
+    date: {
+      type: Date,
+      required: true,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );
@@ -89,6 +94,7 @@ purchaseOrderSchema.index({ company: 1, poNumber: 1 }, { unique: true });
 purchaseOrderSchema.index({ company: 1, status: 1 });
 purchaseOrderSchema.index({ company: 1, tallyGuid: 1 }, { unique: true, partialFilterExpression: { tallyGuid: { $type: "string" } } });
 purchaseOrderSchema.index({ company: 1, supplier: 1 });
+purchaseOrderSchema.index({ company: 1, date: -1 });
 purchaseOrderSchema.index({ company: 1, createdAt: -1 });
 
 module.exports = mongoose.model('PurchaseOrder', purchaseOrderSchema);
