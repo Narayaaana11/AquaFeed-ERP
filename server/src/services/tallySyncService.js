@@ -836,7 +836,7 @@ async function syncTallyData(targetCompanyId = null) {
         { tallyGuid: v.guid, company: companyId },
         {
           $set: {
-            invoiceNumber: v.voucher_number || `TI-${v.guid.slice(0, 8).toUpperCase()}`,
+            invoiceNumber: v.voucher_number ? `${v.voucher_number}-${v.guid.slice(0, 4).toUpperCase()}` : `TI-${v.guid.slice(0, 8).toUpperCase()}`,
             customer: dbCustomer._id,
             customerName: dbCustomer.name,
             items,
@@ -912,7 +912,7 @@ async function syncTallyData(targetCompanyId = null) {
         { tallyGuid: v.guid, company: companyId },
         {
           $set: {
-            poNumber: v.voucher_number || `TPO-${v.guid.slice(0, 8).toUpperCase()}`,
+            poNumber: v.voucher_number ? `${v.voucher_number}-${v.guid.slice(0, 4).toUpperCase()}` : `TPO-${v.guid.slice(0, 8).toUpperCase()}`,
             supplier: dbSupplier._id,
             supplierName: dbSupplier.name,
             items,
@@ -1074,7 +1074,7 @@ async function syncTallyData(targetCompanyId = null) {
             { tallyGuid: v.guid, company: companyId },
             {
               $set: {
-                poNumber: v.voucher_number || `PB-${v.guid.slice(0, 8).toUpperCase()}`,
+                poNumber: v.voucher_number ? `${v.voucher_number}-${v.guid.slice(0, 4).toUpperCase()}` : `PB-${v.guid.slice(0, 8).toUpperCase()}`,
                 supplier: dbSupplier._id,
                 supplierName: dbSupplier.name,
                 items,
@@ -1147,7 +1147,7 @@ async function syncTallyData(targetCompanyId = null) {
             { tallyGuid: v.guid, company: companyId },
             {
               $set: {
-                creditNoteNumber: v.voucher_number || `CN-${v.guid.slice(0, 8).toUpperCase()}`,
+                creditNoteNumber: v.voucher_number ? `${v.voucher_number}-${v.guid.slice(0, 4).toUpperCase()}` : `CN-${v.guid.slice(0, 8).toUpperCase()}`,
                 originalInvoice: origInvoice._id,
                 originalInvoiceNumber: origInvoice.invoiceNumber,
                 customer: dbCustomer._id,
@@ -1235,7 +1235,7 @@ async function syncTallyData(targetCompanyId = null) {
           { tallyGuid: v.guid, company: companyId },
           {
             $set: {
-              quotationNumber: v.voucher_number || `SO-${v.guid.slice(0, 8).toUpperCase()}`,
+              quotationNumber: v.voucher_number ? `${v.voucher_number}-${v.guid.slice(0, 4).toUpperCase()}` : `SO-${v.guid.slice(0, 8).toUpperCase()}`,
               customer: dbCustomer._id,
               customerName: dbCustomer.name,
               items,
