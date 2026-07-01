@@ -214,7 +214,9 @@ export default function Customers() {
                     <div>
                       <p className="text-muted-foreground">Outstanding</p>
                       <div className="flex items-center gap-1">
-                        <p className={`font-display font-bold ${r.outstandingBalance > 0 ? "text-warning" : "text-success"}`}>₹{r.outstandingBalance.toLocaleString("en-IN")}</p>
+                        <p className={`font-display font-bold ${r.outstandingBalance > 0 ? "text-warning" : "text-success"}`}>
+                          ₹{Math.abs(r.outstandingBalance).toLocaleString("en-IN")} {r.outstandingBalance >= 0 ? "Dr" : "Cr"}
+                        </p>
                         {isOverLimit && <AlertTriangle className="w-3 h-3 text-destructive" />}
                       </div>
                     </div>
@@ -276,7 +278,7 @@ export default function Customers() {
                 return (
                   <div className="flex items-center gap-2">
                     <span className={`font-medium ${r.outstandingBalance > 0 ? "text-warning" : "text-success"}`}>
-                      ₹{r.outstandingBalance.toLocaleString("en-IN")}
+                      ₹{Math.abs(r.outstandingBalance).toLocaleString("en-IN")} {r.outstandingBalance >= 0 ? "Dr" : "Cr"}
                     </span>
                     {isOverLimit && <AlertTriangle className="w-3.5 h-3.5 text-destructive" />}
                   </div>

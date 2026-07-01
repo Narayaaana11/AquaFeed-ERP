@@ -234,19 +234,18 @@ export default function Dashboard() {
           icon={ShoppingCart}
         />
         <StatCard
-          title="Total Products"
-          value={dashLoading ? "..." : String(kpis?.products?.value || 0)}
-          change="Active products"
+          title="Recovery Balance"
+          value={dashLoading ? "..." : `₹${(fm.receivables || 0).toLocaleString("en-IN")}`}
+          change="Pending Receivables"
           changeType="neutral"
-          icon={Package}
+          icon={ArrowUpRight}
         />
         <StatCard
-          title="Low Stock Items"
-          value={dashLoading ? "..." : String(kpis?.lowStock?.value || 0)}
-          change="Requires reorder"
-          changeType={kpis?.lowStock?.value > 0 ? "negative" : "positive"}
-          icon={AlertTriangle}
-          iconColor="bg-warning/10 text-warning"
+          title="Net Profit"
+          value={dashLoading ? "..." : `₹${(kpis?.profit?.value || 0).toLocaleString("en-IN")}`}
+          change="Period Profit"
+          changeType="positive"
+          icon={TrendingUp}
         />
         <StatCard
           title="Total Customers"
@@ -438,25 +437,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 md:gap-4">
-        {/* Top Products */}
-        <div className="bg-surface rounded-xl border border-border shadow-card p-4 md:p-5">
-          <p className="text-xs font-display font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-            Top Selling Products
-          </p>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={topProducts.length > 0 ? topProducts : [{ name: "No data", qty: 0 }]} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(214 32% 91%)" />
-              <XAxis type="number" tick={{ fontSize: 10, fontFamily: "var(--font-body)", fill: "#64748b" }} axisLine={false} tickLine={false} />
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fontFamily: "var(--font-body)", fill: "#64748b" }} axisLine={false} tickLine={false} width={120} />
-              <Tooltip formatter={(value: number) => [`${value.toLocaleString("en-IN")} units`, "Quantity"]} contentStyle={{ border: "1px solid hsl(214 32% 91%)", borderRadius: 8, fontSize: 12 }} />
-              <Bar dataKey="qty" fill="#14b8a6" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
+      <div className="grid grid-cols-1 gap-3 md:gap-4">
         {/* Recent Sales */}
-        <div className="xl:col-span-2 bg-surface rounded-xl border border-border shadow-card p-4 md:p-5">
+        <div className="bg-surface rounded-xl border border-border shadow-card p-4 md:p-5">
           <div className="flex items-center justify-between mb-4">
             <p className="text-xs font-display font-semibold uppercase tracking-wide text-muted-foreground">Recent Sales</p>
           </div>

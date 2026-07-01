@@ -25,11 +25,7 @@ const navItems = [
   { to: "/sales", label: "Sales", icon: ShoppingCart },
   { to: "/quotations", label: "Quotations", icon: FileText },
   { to: "/customers", label: "Customers", icon: Users },
-  { to: "/expenses", label: "Expenses", icon: Receipt },
-  { to: "/warehouses", label: "Warehouses", icon: Warehouse },
   { to: "/suppliers", label: "Suppliers", icon: Truck },
-  { to: "/purchase-orders", label: "Purchase Orders", icon: ShoppingBag },
-  { to: "/credit-notes", label: "Credit Notes", icon: RotateCcw },
   { to: "/reports", label: "Reports", icon: BarChart2 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];

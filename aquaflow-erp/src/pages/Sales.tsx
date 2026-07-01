@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DataTable } from "@/components/ui/data-table";
 import { StatusBadge, EmptyState } from "@/components/StatusBadge";
 import { FormSelect } from "@/components/forms";
-import { Plus, Eye, FileText, Search, X, CheckCircle, Check, ChevronsUpDown, Printer, RotateCcw, Trash2 } from "lucide-react";
+import { StatCard } from "@/components/ui/stat-card";
+import { Plus, Eye, FileText, Search, X, CheckCircle, Check, ChevronsUpDown, Printer, RotateCcw, Trash2, TrendingUp, DollarSign } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -220,6 +221,28 @@ export default function Sales() {
           </button>
         }
       />
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+        <StatCard
+          title="Today's Sales"
+          value={isLoading ? "..." : `₹${(() => {
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            return invoices.filter((i: any) => new Date(i.date || i.createdAt) >= todayStart).reduce((sum: number, i: any) => sum + (i.total || 0), 0);
+          })().toLocaleString("en-IN")}`}
+          change="Sales generated today"
+          changeType="neutral"
+          icon={TrendingUp}
+        />
+        <StatCard
+          title="Total Sales Amount"
+          value={isLoading ? "..." : `₹${invoices.reduce((sum: number, i: any) => sum + (i.total || 0), 0).toLocaleString("en-IN")}`}
+          change="Overall sales volume"
+          changeType="positive"
+          icon={DollarSign}
+        />
+      </div>
 
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">

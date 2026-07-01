@@ -248,6 +248,14 @@ export default function Suppliers() {
                 </div>
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${termsColor[r.paymentTerms] || "bg-secondary text-foreground"}`}>{r.paymentTerms}</span>
               </div>
+              <div className="flex items-center justify-between mt-3">
+                <div>
+                  <p className="text-muted-foreground text-xs">Outstanding</p>
+                  <p className={`font-display font-bold text-sm ${r.outstandingBalance > 0 ? "text-warning" : "text-success"}`}>
+                    ₹{Math.abs(r.outstandingBalance || 0).toLocaleString("en-IN")} {(r.outstandingBalance || 0) >= 0 ? "Cr" : "Dr"}
+                  </p>
+                </div>
+              </div>
               <div className="mt-3 pt-2 border-t border-border/60 flex items-center justify-between">
                 <div className="space-y-0.5">
                   {r.phone && <div className="flex items-center gap-1 text-xs text-foreground"><Phone className="w-3 h-3 text-muted-foreground" /> {r.phone}</div>}
@@ -318,6 +326,15 @@ export default function Suppliers() {
               cell: (r) => (
                 <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${termsColor[r.paymentTerms] || "bg-secondary text-foreground"}`}>
                   {r.paymentTerms}
+                </span>
+              ),
+            },
+            {
+              key: "outstandingBalance",
+              header: "Outstanding",
+              cell: (r) => (
+                <span className={`font-medium ${r.outstandingBalance > 0 ? "text-warning" : "text-success"}`}>
+                  ₹{Math.abs(r.outstandingBalance || 0).toLocaleString("en-IN")} {(r.outstandingBalance || 0) >= 0 ? "Cr" : "Dr"}
                 </span>
               ),
             },

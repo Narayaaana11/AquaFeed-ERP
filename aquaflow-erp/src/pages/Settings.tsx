@@ -509,12 +509,12 @@ export default function Settings() {
                 type="button"
                 onClick={handleSyncTally}
                 disabled={syncTallyMutation.isPending}
-                className="h-10 px-6 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors shadow-sm flex items-center gap-2"
+                className={`h-10 px-6 rounded-lg text-white text-sm font-display font-semibold transition-colors shadow-sm flex items-center gap-2 ${syncTallyMutation.isPending ? "bg-brand/60 cursor-not-allowed" : "bg-brand hover:bg-brand/90"}`}
               >
                 {syncTallyMutation.isPending ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Syncing Tally Database...</span>
+                    <span>Sync in progress... Please wait</span>
                   </>
                 ) : (
                   <>
@@ -526,25 +526,6 @@ export default function Settings() {
             </div>
           )}
 
-          {isOwner && (
-            <div className="mt-8 border border-destructive/20 bg-destructive/5 rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-1">
-                <ShieldAlert className="w-4 h-4 text-destructive" />
-                <h3 className="font-display font-bold text-destructive text-sm">Danger Zone — Owner Only</h3>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1 mb-4">
-                Irreversibly delete all products, invoices, customers, and expenses for this company workspace.
-                This is useful if you want to clear demo data and start fresh. <strong>Requires your account password.</strong>
-              </p>
-              <button
-                type="button"
-                onClick={handleOpenClearConfirm}
-                className="h-10 px-6 rounded-lg bg-destructive text-white text-sm font-display font-semibold hover:bg-destructive/90 transition-colors shadow-sm"
-              >
-                Clear Workspace Data
-              </button>
-            </div>
-          )}
         </div>
       )}
 
