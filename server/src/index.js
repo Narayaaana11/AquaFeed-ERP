@@ -33,6 +33,7 @@ const creditNoteRoutes = require('./routes/creditNotes');
 const quotationRoutes = require('./routes/quotations');
 const batchesRoutes = require('./routes/batches');
 const financeRoutes = require('./routes/finance');
+const advancedReportsRoutes = require('./routes/advancedReports');
 
 const app = express();
 const server = http.createServer(app);
@@ -278,6 +279,7 @@ app.use('/api/credit-notes', creditNoteRoutes);
 app.use('/api/quotations', quotationRoutes);
 app.use('/api/batches', batchesRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/advanced-reports', advancedReportsRoutes);
 app.use('/api/tally', require('./routes/tally'));
 
 // Serve React frontend only if the dist folder exists (self-hosted / same-server deploy).

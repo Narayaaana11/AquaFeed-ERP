@@ -28,6 +28,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable } from "@/components/ui/data-table";
 import { usePaymentHistory } from "@/hooks/useSales";
 import { Search } from "lucide-react";
+import TrialBalance from "./AdvancedReports/TrialBalance";
+import ProfitLoss from "./AdvancedReports/ProfitLoss";
+import BalanceSheet from "./AdvancedReports/BalanceSheet";
+import GstSummary from "./AdvancedReports/GstSummary";
 
 const COLORS = ["#14b8a6", "#0d9488", "#0f766e", "#115e59", "#134e4a"];
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -149,6 +153,10 @@ export default function Reports() {
         <div className="flex items-center mb-6">
           <TabsList>
             <TabsTrigger value="overview">Overview & Analytics</TabsTrigger>
+            <TabsTrigger value="trial-balance">Trial Balance</TabsTrigger>
+            <TabsTrigger value="profit-loss">Profit & Loss</TabsTrigger>
+            <TabsTrigger value="balance-sheet">Balance Sheet</TabsTrigger>
+            <TabsTrigger value="gst">GST Summary</TabsTrigger>
             <TabsTrigger value="payment-history">Payment History</TabsTrigger>
           </TabsList>
         </div>
@@ -481,6 +489,18 @@ export default function Reports() {
           </div>
         </div>
       </div>
+        </TabsContent>
+        <TabsContent value="trial-balance" className="mt-0">
+          <TrialBalance />
+        </TabsContent>
+        <TabsContent value="profit-loss" className="mt-0">
+          <ProfitLoss />
+        </TabsContent>
+        <TabsContent value="balance-sheet" className="mt-0">
+          <BalanceSheet />
+        </TabsContent>
+        <TabsContent value="gst" className="mt-0">
+          <GstSummary />
         </TabsContent>
         <TabsContent value="payment-history" className="mt-0 space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">
