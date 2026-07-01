@@ -5,15 +5,14 @@ import {
   Layers,
   ShoppingCart,
   Users,
-  Receipt,
   Warehouse,
   BarChart2,
   Settings,
   LogOut,
   Truck,
-  ShoppingBag,
-  RotateCcw,
   FileText,
+  Building2,
+  PackageSearch,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLogo } from "@/components/AppLogo";
@@ -21,11 +20,14 @@ import { AppLogo } from "@/components/AppLogo";
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/products", label: "Products", icon: Package },
-  { to: "/inventory", label: "Inventory", icon: Layers },
+  { to: "/inventory", label: "Inventory", icon: PackageSearch },
+  { to: "/batches", label: "Batches", icon: Layers },
+  { to: "/warehouses", label: "Warehouses", icon: Building2 },
   { to: "/sales", label: "Sales", icon: ShoppingCart },
   { to: "/quotations", label: "Quotations", icon: FileText },
   { to: "/customers", label: "Customers", icon: Users },
   { to: "/suppliers", label: "Suppliers", icon: Truck },
+  { to: "/finance", label: "Accounting", icon: Building2 },
   { to: "/reports", label: "Reports", icon: BarChart2 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];

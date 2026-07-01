@@ -12,6 +12,7 @@ const CreditNote = require('../models/CreditNote');
 const Quotation = require('../models/Quotation');
 const Expense = require('../models/Expense');
 const FinancialMetric = require('../models/FinancialMetric');
+const Batch = require('../models/Batch');
 
 let isSyncRunning = false;
 let syncIntervalId = null;
@@ -318,6 +319,14 @@ async function executeQuery(connection, queryStr, params = []) {
           }
         }
       ]).toArray();
+    // 10. Batches query (Opening)
+    if (normalized.startsWith('SELECT name, item, opening_balance, opening_rate, opening_value, godown, manufactured_on FROM mst_opening_batch_allocation')) {
+      return await connection.collection('mst_opening_batch_allocation').find({}).toArray();
+    }
+
+    // 11. Batches query (Transactions)
+    if (normalized.startsWith('SELECT guid, item, name, quantity, amount, godown, destination_godown, tracking_number FROM trn_batch')) {
+      return await connection.collection('trn_batch').find({}).toArray();
     }
     
     return [];
@@ -414,6 +423,7 @@ async function syncTallyData(targetCompanyId = null) {
   let connection = null;
   const stats = {
     warehouses: 0,
+    batches: 0,
     customers: 0,
     suppliers: 0,
     products: 0,
@@ -654,6 +664,79 @@ async function syncTallyData(targetCompanyId = null) {
         );
       }
       stats.products++;
+    }
+
+    // 6.5 Sync Batches (Opening & Transactions)
+    console.log('🔄 Syncing Batches...');
+    stats.batches = 0;
+    
+    // Reset all batch quantities to 0 before recalculating
+    await Batch.updateMany({ company: companyId }, { $set: { quantity: 0, value: 0 } });
+    
+    // Add opening balances
+    const openingBatches = await executeQuery(connection, 'SELECT name, item, opening_balance, opening_rate, opening_value, godown, manufactured_on FROM mst_opening_batch_allocation');
+    for (const ob of openingBatches) {
+      if (!ob.name || ob.name.trim() === '') continue;
+      
+      const dbProduct = await Product.findOne({ name: ob.item, company: companyId });
+      let dbWarehouse = defaultWarehouse;
+      if (ob.godown) {
+        const found = await Warehouse.findOne({ name: ob.godown, company: companyId });
+        if (found) dbWarehouse = found;
+      }
+      
+      if (dbProduct) {
+        await Batch.findOneAndUpdate(
+          { name: ob.name, product: dbProduct._id, company: companyId },
+          {
+            $set: {
+              productName: dbProduct.name,
+              warehouse: dbWarehouse ? dbWarehouse._id : null,
+              warehouseName: dbWarehouse ? dbWarehouse.name : null,
+              rate: parseFloat(ob.opening_rate) || 0,
+              manufacturedOn: ob.manufactured_on ? new Date(ob.manufactured_on) : null
+            },
+            $inc: {
+              quantity: parseFloat(ob.opening_balance) || 0,
+              value: parseFloat(ob.opening_value) || 0
+            }
+          },
+          { upsert: true }
+        );
+        stats.batches++;
+      }
+    }
+
+    // Add transactions
+    const trnBatches = await executeQuery(connection, 'SELECT guid, item, name, quantity, amount, godown, destination_godown, tracking_number FROM trn_batch');
+    for (const tb of trnBatches) {
+       if (!tb.name || tb.name.trim() === '') continue;
+       
+       const dbProduct = await Product.findOne({ name: tb.item, company: companyId });
+       let dbWarehouse = defaultWarehouse;
+       if (tb.godown) {
+         const found = await Warehouse.findOne({ name: tb.godown, company: companyId });
+         if (found) dbWarehouse = found;
+       }
+
+       if (dbProduct) {
+         await Batch.findOneAndUpdate(
+           { name: tb.name, product: dbProduct._id, company: companyId },
+           {
+             $set: {
+               tallyGuid: tb.guid,
+               productName: dbProduct.name,
+               warehouse: dbWarehouse ? dbWarehouse._id : null,
+               warehouseName: dbWarehouse ? dbWarehouse.name : null
+             },
+             $inc: {
+               quantity: parseFloat(tb.quantity) || 0,
+               value: parseFloat(tb.amount) || 0
+             }
+           },
+           { upsert: true }
+         );
+       }
     }
 
     // 7. Sync Sales Invoices (Vouchers mapping to base type 'Sales')
@@ -1394,5 +1477,7 @@ function stopSyncScheduler() {
 module.exports = {
   syncTallyData,
   startSyncScheduler,
-  stopSyncScheduler
+  stopSyncScheduler,
+  getDbConnection,
+  closeDbConnection
 };

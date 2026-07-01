@@ -12,8 +12,8 @@ import {
   Settings,
   X,
   Truck,
-  ShoppingBag,
-  RotateCcw,
+  Building2,
+  PackageSearch,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -25,7 +25,10 @@ const primaryNav = [
 ];
 
 const moreNav = [
-  { to: "/inventory", label: "Inventory", icon: Layers },
+  { to: "/inventory", label: "Inventory", icon: PackageSearch },
+  { to: "/batches", label: "Batches", icon: Layers },
+  { to: "/warehouses", label: "Warehouses", icon: Building2 },
+  { to: "/finance", label: "Accounting", icon: Building2 },
   { to: "/suppliers", label: "Suppliers", icon: Truck },
   { to: "/reports", label: "Reports", icon: BarChart2 },
   { to: "/settings", label: "Settings", icon: Settings },

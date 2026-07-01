@@ -14,6 +14,8 @@ import Dashboard from "./pages/Dashboard.tsx";
 import Products from "./pages/Products.tsx";
 import Inventory from "./pages/Inventory.tsx";
 import Warehouses from "./pages/Warehouses.tsx";
+import Batches from "./pages/Batches.tsx";
+import Finance from "./pages/Finance.tsx";
 import Sales from "./pages/Sales.tsx";
 import Customers from "./pages/Customers.tsx";
 import Expenses from "./pages/Expenses.tsx";
@@ -154,6 +156,8 @@ const App = () => {
               <Route path="/products" element={<Products />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/warehouses" element={<Warehouses />} />
+              <Route path="/batches" element={<Batches />} />
+              <Route path="/finance" element={<Finance />} />
               <Route path="/sales" element={<Sales />} />
               <Route path="/sales/:id/print" element={<InvoicePrint />} />
               <Route path="/customers" element={<Customers />} />
