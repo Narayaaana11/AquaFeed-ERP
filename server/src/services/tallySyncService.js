@@ -754,65 +754,88 @@ async function syncTallyData(targetCompanyId = null) {
       console.log(`📊 Found ${salesVouchers.length} sales invoices to process.`);
       let chunkStartTime = Date.now();
 
-      for (let i = 0; i < salesVouchers.length; i += CHUNK_SIZE) {
-        const chunk = salesVouchers.slice(i, i + CHUNK_SIZE);
-        await Promise.all(chunk.map(async (v) => {
-          const dbCustomer = await getOrCreateCustomer(v.party_name);
-          const invItemsRows = await executeQuery(connection, 'SELECT item, quantity, rate, amount, discount_amount, godown FROM trn_inventory WHERE guid = ?', [v.guid]);
-          const items = [];
-          let subtotal = 0;
-          for (const itemRow of invItemsRows) {
-            const dbProduct = await getOrCreateProduct(itemRow.item, itemRow.rate);
-            const qty = Math.abs(parseFloat(itemRow.quantity) || 0);
-            const unitPrice = Math.abs(parseFloat(itemRow.rate) || 0);
-            const discountVal = Math.abs(parseFloat(itemRow.discount_amount) || 0);
-            const lineTotal = Math.abs(parseFloat(itemRow.amount) || 0);
-            subtotal += lineTotal;
-            items.push({
-              product: dbProduct._id, productName: dbProduct.name, quantity: qty, unitPrice,
-              discount: discountVal > 0 ? Math.round((discountVal / (qty * unitPrice)) * 100) : 0, lineTotal
-            });
-          }
+      try {
+        console.log("Starting invoice chunk loop");
+        for (let i = 0; i < salesVouchers.length; i += CHUNK_SIZE) {
+          const chunk = salesVouchers.slice(i, i + CHUNK_SIZE);
+          
+          console.log(`Before Promise.all for chunk ${i}`);
+          await Promise.all(chunk.map(async (v) => {
+            try {
+              const dbCustomer = await getOrCreateCustomer(v.party_name);
+              const invItemsRows = await executeQuery(connection, 'SELECT item, quantity, rate, amount, discount_amount, godown FROM trn_inventory WHERE guid = ?', [v.guid]);
+              const items = [];
+              let subtotal = 0;
+              for (const itemRow of invItemsRows) {
+                const dbProduct = await getOrCreateProduct(itemRow.item, itemRow.rate);
+                const qty = Math.abs(parseFloat(itemRow.quantity) || 0);
+                const unitPrice = Math.abs(parseFloat(itemRow.rate) || 0);
+                const discountVal = Math.abs(parseFloat(itemRow.discount_amount) || 0);
+                const lineTotal = Math.abs(parseFloat(itemRow.amount) || 0);
+                subtotal += lineTotal;
+                items.push({
+                  product: dbProduct._id, productName: dbProduct.name, quantity: qty, unitPrice,
+                  discount: discountVal > 0 ? Math.round((discountVal / (qty * unitPrice)) * 100) : 0, lineTotal
+                });
+              }
 
-          const accRows = await executeQuery(connection, 'SELECT ledger, amount FROM trn_accounting WHERE guid = ?', [v.guid]);
-          let totalAmount = 0, gstAmount = 0;
-          let hasBankOrCash = false;
-          for (const acc of accRows) {
-            const accAmount = Math.abs(parseFloat(acc.amount) || 0);
-            if (acc.ledger === v.party_name) totalAmount = accAmount;
-            const ledgerUpper = acc.ledger.toUpperCase();
-            if (ledgerUpper.includes('CGST') || ledgerUpper.includes('SGST') || ledgerUpper.includes('IGST') || ledgerUpper.includes('GST')) gstAmount += accAmount;
-            if (ledgerUpper.includes('CASH') || ledgerUpper.includes('BANK') || ledgerUpper.includes('SBI') || ledgerUpper.includes('HDFC') || ledgerUpper.includes('ICICI')) hasBankOrCash = true;
-          }
-          if (totalAmount === 0) totalAmount = subtotal + gstAmount;
+              const accRows = await executeQuery(connection, 'SELECT ledger, amount FROM trn_accounting WHERE guid = ?', [v.guid]);
+              let totalAmount = 0, gstAmount = 0;
+              let hasBankOrCash = false;
+              for (const acc of accRows) {
+                const accAmount = Math.abs(parseFloat(acc.amount) || 0);
+                if (acc.ledger === v.party_name) totalAmount = accAmount;
+                const ledgerUpper = acc.ledger.toUpperCase();
+                if (ledgerUpper.includes('CGST') || ledgerUpper.includes('SGST') || ledgerUpper.includes('IGST') || ledgerUpper.includes('GST')) gstAmount += accAmount;
+                if (ledgerUpper.includes('CASH') || ledgerUpper.includes('BANK') || ledgerUpper.includes('SBI') || ledgerUpper.includes('HDFC') || ledgerUpper.includes('ICICI')) hasBankOrCash = true;
+              }
+              if (totalAmount === 0) totalAmount = subtotal + gstAmount;
 
-          const gstRate = subtotal > 0 ? Math.round((gstAmount / subtotal) * 100) : 5;
-          const status = hasBankOrCash ? 'Paid' : 'Credit';
-          const paymentType = hasBankOrCash ? 'Cash' : 'Credit';
-          const paidAmount = hasBankOrCash ? totalAmount : 0;
-          const invoiceNumber = v.voucher_number ? `${v.voucher_number}-${v.guid.slice(0, 4).toUpperCase()}` : `TI-${v.guid.slice(0, 8).toUpperCase()}`;
+              const gstRate = subtotal > 0 ? Math.round((gstAmount / subtotal) * 100) : 5;
+              const status = hasBankOrCash ? 'Paid' : 'Credit';
+              const paymentType = hasBankOrCash ? 'Cash' : 'Credit';
+              const paidAmount = hasBankOrCash ? totalAmount : 0;
+              const invoiceNumber = v.voucher_number ? `${v.voucher_number}-${v.guid.slice(0, 4).toUpperCase()}` : `TI-${v.guid.slice(0, 8).toUpperCase()}`;
 
-          invoiceOps.push({
-            updateOne: {
-              filter: { company: companyId, invoiceNumber }, // FIX for E11000 Duplicate Key Error
-              update: {
-                $set: {
-                  tallyGuid: v.guid, customer: dbCustomer._id, customerName: dbCustomer.name, items, subtotal, gstRate, gstAmount,
-                  total: totalAmount, paidAmount, paymentType, status, date: new Date(v.date), dueDate: new Date(v.date),
-                  notes: v.narration || '', warehouse: defaultWarehouse ? defaultWarehouse._id : null
+              invoiceOps.push({
+                updateOne: {
+                  filter: { company: companyId, invoiceNumber },
+                  update: {
+                    $set: {
+                      tallyGuid: v.guid, customer: dbCustomer._id, customerName: dbCustomer.name, items, subtotal, gstRate, gstAmount,
+                      total: totalAmount, paidAmount, paymentType, status, date: new Date(v.date), dueDate: new Date(v.date),
+                      notes: v.narration || '', warehouse: defaultWarehouse ? defaultWarehouse._id : null
+                    }
+                  },
+                  upsert: true
                 }
-              },
-              upsert: true
+              });
+            } catch (innerErr) {
+              console.error(`Error processing individual invoice ${v.guid}:`, innerErr);
             }
-          });
-        }));
+          }));
+          console.log(`After Promise.all for chunk ${i}`);
 
-        const currentCount = Math.min(i + CHUNK_SIZE, salesVouchers.length);
-        const timeTaken = Date.now() - chunkStartTime;
-        console.log(`Processing invoice ${currentCount}/${salesVouchers.length} (took ${timeTaken}ms)`);
-        chunkStartTime = Date.now(); // reset for next chunk
+          const currentCount = Math.min(i + CHUNK_SIZE, salesVouchers.length);
+          const timeTaken = Date.now() - chunkStartTime;
+          console.log(`Processing invoice ${currentCount}/${salesVouchers.length} (took ${timeTaken}ms)`);
+          chunkStartTime = Date.now(); // reset for next chunk
+        }
+        console.log("Invoice chunk loop completed");
+
+        console.time("Invoice bulkWrite");
+        console.log("Before executeBulkWriteInBatches for Invoices");
+        stats.invoices += await executeBulkWriteInBatches(Invoice, invoiceOps);
+        console.log("After executeBulkWriteInBatches for Invoices");
+        console.timeEnd("Invoice bulkWrite");
+        console.log("Invoice bulkWrite completed");
+        
+        console.log("Leaving invoice sync");
+        console.log("Invoice sync finished successfully");
+      } catch (err) {
+        console.error("Error during entire invoice sync process:", err);
       }
-      stats.invoices += await executeBulkWriteInBatches(Invoice, invoiceOps);
+
       console.log(`   ⏱️ Invoices took ${(Date.now() - t0)}ms`);
 
       // 7. Sync Purchase Orders
