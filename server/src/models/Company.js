@@ -74,6 +74,17 @@ const companySchema = new mongoose.Schema(
       type: String,
       default: 'April',
     },
+    tallyGuid: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    booksFrom: {
+      type: Date,
+    },
+    startingFrom: {
+      type: Date,
+    },
     sortOrder: {
       type: Number,
       default: 0,

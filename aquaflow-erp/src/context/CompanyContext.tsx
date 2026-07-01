@@ -3,6 +3,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 interface Company {
   _id: string;
   name: string;
+  booksFrom?: string;
+  startingFrom?: string;
 }
 
 interface CompanyContextType {

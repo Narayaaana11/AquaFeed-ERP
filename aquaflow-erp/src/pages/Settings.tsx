@@ -563,6 +563,7 @@ export default function Settings() {
               <thead>
                 <tr className="border-b border-border bg-background">
                   <th className="px-6 py-3 text-left font-display font-semibold text-muted-foreground">Company Name</th>
+                  <th className="px-6 py-3 text-left font-display font-semibold text-muted-foreground">Financial Period</th>
                   <th className="px-6 py-3 text-left font-display font-semibold text-muted-foreground w-32">Order</th>
                 </tr>
               </thead>
@@ -570,6 +571,11 @@ export default function Settings() {
                 {companies.map((c: any) => (
                   <tr key={c._id} className="hover:bg-secondary/20 transition-colors">
                     <td className="px-6 py-4 font-medium text-foreground">{c.name}</td>
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {c.startingFrom && c.booksFrom 
+                        ? `${new Date(c.startingFrom).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')} to ${new Date(c.booksFrom).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')}` 
+                        : 'N/A'}
+                    </td>
                     <td className="px-6 py-4">
                       <input
                         type="number"

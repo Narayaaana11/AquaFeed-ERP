@@ -119,6 +119,12 @@ async function executeQuery(connection, queryStr, params = []) {
   if (dbTech === 'mongodb') {
     const normalized = queryStr.replace(/\s+/g, ' ').trim();
     
+    // 0. Company query
+    if (normalized.startsWith('SELECT guid, name, books_from, starting_from FROM mst_company')) {
+      return await connection.collection('mst_company').find({}).toArray();
+    }
+    
+    
     // 1. Warehouse/Godown query
     if (normalized.startsWith('SELECT guid, name, parent, address FROM mst_godown')) {
       return await connection.collection('mst_godown').find({}, { projection: { guid: 1, name: 1, parent: 1, address: 1 } }).toArray();
@@ -461,28 +467,48 @@ async function syncTallyData(targetCompanyId = null) {
 
       // 3. Resolve Company
       let companyName = process.env.TALLY_COMPANY || 'VIJAYA DURGA AQUA FEEDS & NEEDS';
+      let companyMetadata = null;
       try {
-        const configRows = await executeQuery(connection, "SELECT name, value FROM config");
-        const companyConfig = configRows.find(r => r.name === 'Company Name');
-        if (companyConfig && companyConfig.value) {
-          companyName = companyConfig.value;
-          console.log(`🏢 Dynamically resolved company name from staging DB "${dbName}": "${companyName}"`);
+        const companyRows = await executeQuery(connection, "SELECT guid, name, books_from, starting_from FROM mst_company");
+        if (companyRows && companyRows.length > 0) {
+          companyMetadata = companyRows[0];
+          companyName = companyMetadata.name || companyName;
+          console.log(`🏢 Resolved company metadata from mst_company: "${companyName}"`);
+        } else {
+          // fallback to config table
+          const configRows = await executeQuery(connection, "SELECT name, value FROM config");
+          const companyConfig = configRows.find(r => r.name === 'Company Name');
+          if (companyConfig && companyConfig.value) {
+            companyName = companyConfig.value;
+            console.log(`🏢 Dynamically resolved company name from staging DB config: "${companyName}"`);
+          }
         }
-      } catch (configErr) {
-        console.warn(`⚠️ Could not query config table from staging DB "${dbName}":`, configErr.message);
+      } catch (err) {
+        console.warn(`⚠️ Could not query company metadata from staging DB "${dbName}":`, err.message);
       }
 
       let company;
       if (targetCompanyId) {
         company = await Company.findById(targetCompanyId);
       } else {
-        // Find existing company by exact name match (case-insensitive)
-        company = await Company.findOne({ name: { $regex: new RegExp('^' + companyName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '$', 'i') } });
+        // Find existing company by exact name match (case-insensitive) or by tallyGuid
+        let findQuery = { name: { $regex: new RegExp('^' + companyName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '$', 'i') } };
+        if (companyMetadata && companyMetadata.guid) {
+          findQuery = { $or: [{ tallyGuid: companyMetadata.guid }, findQuery] };
+        }
+        company = await Company.findOne(findQuery);
         
+        const companyDataToUpdate = {
+          name: companyName,
+          tallyGuid: companyMetadata ? companyMetadata.guid : undefined,
+          booksFrom: companyMetadata ? new Date(companyMetadata.books_from) : undefined,
+          startingFrom: companyMetadata ? new Date(companyMetadata.starting_from) : undefined
+        };
+
         if (!company) {
           // Last resort: create a new company profile
           company = await Company.create({
-            name: companyName,
+            ...companyDataToUpdate,
             ownerName: 'Tally Admin',
             phone: '',
             email: '',
@@ -492,6 +518,9 @@ async function syncTallyData(targetCompanyId = null) {
             currency: 'INR'
           });
           console.log(`🏢 Created new Company: ${companyName}`);
+        } else {
+          // Update existing company with dates if missing
+          company = await Company.findByIdAndUpdate(company._id, { $set: companyDataToUpdate }, { new: true });
         }
       }
       const companyId = company._id;

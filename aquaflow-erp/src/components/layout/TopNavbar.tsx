@@ -91,11 +91,19 @@ export function TopNavbar({ title, subtitle }: TopNavbarProps) {
             title="Filter data by company"
           >
             <option value="all">All Companies</option>
-            {companies.map((c) => (
-              <option key={c._id} value={c._id}>
-                {c.name}
-              </option>
-            ))}
+            {companies.map((c) => {
+              let periodStr = "";
+              if (c.startingFrom && c.booksFrom) {
+                const sDate = new Date(c.startingFrom).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-');
+                const bDate = new Date(c.booksFrom).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-');
+                periodStr = ` (${sDate} to ${bDate})`;
+              }
+              return (
+                <option key={c._id} value={c._id}>
+                  {c.name}{periodStr}
+                </option>
+              );
+            })}
           </select>
         </div>
       )}

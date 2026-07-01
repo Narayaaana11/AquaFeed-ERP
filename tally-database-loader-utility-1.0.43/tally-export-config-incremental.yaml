@@ -1,4 +1,20 @@
 master:
+    - name: mst_company
+      collection: Company
+      nature: Primary
+      fields:
+        - name: guid
+          field: Guid
+          type: text
+        - name: name
+          field: Name
+          type: text
+        - name: books_from
+          field: BooksFrom
+          type: date
+        - name: starting_from
+          field: StartingFrom
+          type: date
     - name: mst_group
       collection: Group
       nature: Primary
