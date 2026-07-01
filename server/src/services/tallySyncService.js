@@ -748,10 +748,12 @@ async function syncTallyData(targetCompanyId = null) {
          WHERE voucher_type = 'Sales' OR voucher_type IN (SELECT name FROM mst_vouchertype WHERE parent = 'Sales')`
       );
       
-      // Batch processing for invoices to avoid fetching inventory rows one by one if possible, 
-      // but tally queries aren't easy to bulk-fetch inventory. We'll fetch inventory rows in parallel.
+      // Batch processing for invoices
       const invoiceOps = [];
-      const CHUNK_SIZE = 500;
+      const CHUNK_SIZE = 100;
+      console.log(`📊 Found ${salesVouchers.length} sales invoices to process.`);
+      let chunkStartTime = Date.now();
+
       for (let i = 0; i < salesVouchers.length; i += CHUNK_SIZE) {
         const chunk = salesVouchers.slice(i, i + CHUNK_SIZE);
         await Promise.all(chunk.map(async (v) => {
@@ -804,6 +806,11 @@ async function syncTallyData(targetCompanyId = null) {
             }
           });
         }));
+
+        const currentCount = Math.min(i + CHUNK_SIZE, salesVouchers.length);
+        const timeTaken = Date.now() - chunkStartTime;
+        console.log(`Processing invoice ${currentCount}/${salesVouchers.length} (took ${timeTaken}ms)`);
+        chunkStartTime = Date.now(); // reset for next chunk
       }
       stats.invoices += await executeBulkWriteInBatches(Invoice, invoiceOps);
       console.log(`   ⏱️ Invoices took ${(Date.now() - t0)}ms`);
