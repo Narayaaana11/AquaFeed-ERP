@@ -281,7 +281,11 @@ const clearCompanyData = async (req, res, next) => {
 const syncTallyData = async (req, res, next) => {
   try {
     const tallySyncService = require('../services/tallySyncService');
-    const result = await tallySyncService.syncTallyData(req.companyId);
+    let targetId = req.companyId;
+    if (typeof targetId === 'object' && targetId.$in) {
+      targetId = null;
+    }
+    const result = await tallySyncService.syncTallyData(targetId);
     if (result.success) {
       res.json(result);
     } else {

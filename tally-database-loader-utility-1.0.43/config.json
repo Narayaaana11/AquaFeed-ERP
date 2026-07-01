@@ -1,7 +1,7 @@
 {
     "database": {
         "technology": "mongodb",
-        "server": "mongodb+srv://aquafeederp:aquafeederp@aquafeederp1.058dwtk.mongodb.net/",
+        "server": "mongodb://aquafeederp:aquafeederp@ac-sopvsti-shard-00-00.058dwtk.mongodb.net:27017,ac-sopvsti-shard-00-01.058dwtk.mongodb.net:27017,ac-sopvsti-shard-00-02.058dwtk.mongodb.net:27017/?ssl=true&authSource=admin&replicaSet=atlas-4g3hmr-shard-0",
         "port": 0,
         "ssl": false,
         "schema": "tallydb",

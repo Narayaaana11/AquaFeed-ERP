@@ -474,11 +474,10 @@ class _database {
                             await this.dbMongodb.collection(tblName).deleteMany({});
                         } else if (q.toLowerCase().startsWith('insert into config')) {
                             let valuesPart = q.substring(q.toLowerCase().indexOf('values') + 6).trim();
-                            let matches = valuesPart.match(/\(([^)]+)\)/g);
+                            let matches = valuesPart.slice(1, -1).split(/\),\s*\(/g);
                             if (matches) {
                                 let docs = [];
-                                for (let match of matches) {
-                                    let content = match.slice(1, -1);
+                                for (let content of matches) {
                                     let parts = content.slice(0).split(/,(?=(?:[^']*'[^']*')*[^']*$)/);
                                     let nameVal = parts[0].trim().replace(/^'|'$/g, '').replace(/''/g, "'");
                                     let valVal = parts[1].trim().replace(/^'|'$/g, '').replace(/''/g, "'");
