@@ -505,9 +505,19 @@ export default function Settings() {
                 </div>
               )}
 
-              <div className="flex items-center gap-2 px-3 py-2 bg-success/10 text-success rounded-lg w-fit text-xs font-medium border border-success/20">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Syncing automatically in the background</span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex items-center gap-2 px-3 py-2 bg-success/10 text-success rounded-lg w-fit text-xs font-medium border border-success/20">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Syncing automatically in the background</span>
+                </div>
+                <button
+                  onClick={handleSyncTally}
+                  disabled={syncTallyMutation.isPending}
+                  className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg text-xs font-medium hover:bg-brand/90 disabled:opacity-50 transition-colors"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${syncTallyMutation.isPending ? 'animate-spin' : ''}`} />
+                  {syncTallyMutation.isPending ? 'Syncing Now...' : 'Force Sync Now'}
+                </button>
               </div>
             </div>
           )}
