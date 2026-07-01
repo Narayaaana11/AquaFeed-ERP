@@ -10,7 +10,7 @@
         "loadmethod": "insert"
     },
     "tally": {
-        "definition": "tally-export-config.yaml",
+        "definition": "tally-export-config-incremental.yaml",
         "server": "localhost",
         "port": 9000,
         "fromdate": "auto",

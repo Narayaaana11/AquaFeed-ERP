@@ -505,24 +505,10 @@ export default function Settings() {
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={handleSyncTally}
-                disabled={syncTallyMutation.isPending}
-                className={`h-10 px-6 rounded-lg text-white text-sm font-display font-semibold transition-colors shadow-sm flex items-center gap-2 ${syncTallyMutation.isPending ? "bg-brand/60 cursor-not-allowed" : "bg-brand hover:bg-brand/90"}`}
-              >
-                {syncTallyMutation.isPending ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Sync in progress... Please wait</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Sync with Tally Now</span>
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-2 px-3 py-2 bg-success/10 text-success rounded-lg w-fit text-xs font-medium border border-success/20">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Syncing automatically in the background</span>
+              </div>
             </div>
           )}
 

@@ -4,6 +4,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState, useEffect } from "react";
+import { useWebSocketContext } from "@/hooks/useWebSocketContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
@@ -39,6 +42,27 @@ const queryClient = new QueryClient({
 
 import { CompanyProvider } from "@/context/CompanyContext";
 
+const GlobalWebSocketSync = () => {
+  const { on, off } = useWebSocketContext();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const handleSyncCompleted = (data: any) => {
+      console.log("Global sync complete event received", data);
+      queryClient.invalidateQueries();
+      toast.success("Real-time data synced from Tally!");
+    };
+
+    on("TALLY_SYNC_COMPLETED", handleSyncCompleted);
+
+    return () => {
+      off("TALLY_SYNC_COMPLETED");
+    };
+  }, [on, off, queryClient]);
+
+  return null;
+};
+
 const ProtectedLayout = () => {
   const isTokenValid = () => {
     const token = localStorage.getItem("token");
@@ -62,6 +86,7 @@ const ProtectedLayout = () => {
   return isTokenValid() ? (
     <CompanyProvider>
       <WebSocketProvider>
+        <GlobalWebSocketSync />
         <Outlet />
       </WebSocketProvider>
     </CompanyProvider>
