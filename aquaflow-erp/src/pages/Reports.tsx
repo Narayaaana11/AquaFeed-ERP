@@ -150,8 +150,8 @@ export default function Reports() {
       />
 
       <Tabs defaultValue="overview" className="w-full">
-        <div className="flex items-center mb-6">
-          <TabsList>
+        <div className="flex items-center mb-6 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 hide-scrollbar">
+          <TabsList className="w-max shrink-0">
             <TabsTrigger value="overview">Overview & Analytics</TabsTrigger>
             <TabsTrigger value="trial-balance">Trial Balance</TabsTrigger>
             <TabsTrigger value="profit-loss">Profit & Loss</TabsTrigger>

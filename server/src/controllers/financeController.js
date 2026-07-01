@@ -1,6 +1,7 @@
 const { getDbConnection, closeDbConnection } = require('../services/tallySyncService');
+const Company = require('../models/Company');
 
-async function getTallyDb() {
+async function getTallyDb(companyId) {
   const baseConnection = await getDbConnection();
   const dbTech = (process.env.SQL_TALLY_DB_TECH || 'mssql').toLowerCase();
   
@@ -25,8 +26,36 @@ async function getTallyDb() {
     stagingDbs = [process.env.SQL_TALLY_DB_NAME || 'tallydb'];
   }
   
-  const dbName = stagingDbs[0];
-  const db = baseConnection.client.db(dbName);
+  // Resolve actual company from companyId (handle 'all' object)
+  let resolvedId = companyId;
+  if (companyId && companyId.$in && companyId.$in.length > 0) {
+    resolvedId = companyId.$in[0];
+  }
+  
+  let targetDbName = stagingDbs[0]; // fallback
+  if (resolvedId) {
+    const company = await Company.findById(resolvedId);
+    if (company && company.tallyGuid) {
+      // Find the staging DB that matches this tallyGuid
+      for (const dbName of stagingDbs) {
+        try {
+          const tempDb = baseConnection.client.db(dbName);
+          const configDoc = await tempDb.collection('config').findOne({ name: 'company_info' });
+          if (configDoc && configDoc.value) {
+            const parsed = JSON.parse(configDoc.value);
+            if (parsed.guid === company.tallyGuid) {
+              targetDbName = dbName;
+              break;
+            }
+          }
+        } catch (e) {
+          // ignore error and continue
+        }
+      }
+    }
+  }
+
+  const db = baseConnection.client.db(targetDbName);
   
   return { db, close: () => closeDbConnection(baseConnection) };
 }
@@ -40,7 +69,7 @@ exports.getLedger = async (req, res, next) => {
     const account = req.query.account;
     if (!account) return res.status(400).json({ success: false, message: 'Account name is required' });
 
-    conn = await getTallyDb();
+    conn = await getTallyDb(req.companyId);
     const { db } = conn;
 
     const entries = await db.collection('trn_accounting').aggregate([
@@ -94,7 +123,7 @@ exports.getLedger = async (req, res, next) => {
 exports.getJournal = async (req, res, next) => {
   let conn;
   try {
-    conn = await getTallyDb();
+    conn = await getTallyDb(req.companyId);
     const { db } = conn;
 
     const journals = await db.collection('trn_voucher').aggregate([
@@ -129,7 +158,7 @@ exports.getJournal = async (req, res, next) => {
 exports.getBankBook = async (req, res, next) => {
   let conn;
   try {
-    conn = await getTallyDb();
+    conn = await getTallyDb(req.companyId);
     const { db } = conn;
 
     const entries = await db.collection('trn_bank').aggregate([
@@ -160,7 +189,7 @@ exports.getBankBook = async (req, res, next) => {
 exports.getOutstanding = async (req, res, next) => {
   let conn;
   try {
-    conn = await getTallyDb();
+    conn = await getTallyDb(req.companyId);
     const { db } = conn;
 
     const bills = await db.collection('trn_bill').aggregate([
