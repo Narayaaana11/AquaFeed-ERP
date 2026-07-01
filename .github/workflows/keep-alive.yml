@@ -1,0 +1,17 @@
+name: Keep Render App Alive
+
+on:
+  schedule:
+    # Runs every 10 minutes to keep the Render free tier from sleeping
+    - cron: "*/10 * * * *"
+  workflow_dispatch: # Allows you to manually trigger the workflow if needed
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Backend Health Route
+        run: |
+          echo "Pinging https://aquafeed-erp.onrender.com/api/health"
+          curl -sSf https://aquafeed-erp.onrender.com/api/health > /dev/null || echo "Ping failed, but the request was sent."
+          echo "Successfully pinged the server."
