@@ -571,7 +571,7 @@ async function syncTallyData(targetCompanyId = null) {
           update: {
             $set: {
               name: c.name, phone: c.mobile || '', email: c.email || '', address: c.mailing_address || '', state: c.mailing_state || '',
-              gstNumber: c.gstn ? c.gstn.toUpperCase() : '', outstandingBalance: parseFloat(c.closing_balance) || 0,
+              gstNumber: c.gstn ? c.gstn.toUpperCase() : '', outstandingBalance: -(parseFloat(c.closing_balance) || 0),
               type: 'Wholesale', isActive: true, notes: `Synced from Tally group: ${c.parent}`, company: companyId
             }
           },
