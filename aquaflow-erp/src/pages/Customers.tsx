@@ -158,7 +158,7 @@ export default function Customers() {
     <AppLayout title="Customers" subtitle="Manage customer accounts and credit">
       <PageHeader
         title="Customers"
-        description={`${customers.length} customers · ₹${totalOutstanding.toLocaleString("en-IN")} outstanding${overdueCount > 0 ? ` · ${overdueCount} over limit` : ""}`}
+        description={`${customers.length} customers · ₹${totalOutstanding.toLocaleString("en-IN")} balance${overdueCount > 0 ? ` · ${overdueCount} over limit` : ""}`}
         actions={
           <button onClick={() => setIsAddOpen(true)} className="flex items-center gap-2 h-9 px-4 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 transition-colors">
             <Plus className="w-4 h-4" /> Add Customer
@@ -212,8 +212,8 @@ export default function Customers() {
                 <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/60">
                   <div className="flex gap-4 text-xs">
                     <div>
-                      <p className="text-muted-foreground">Outstanding</p>
-                      <div className="flex items-center gap-1">
+                      <p className="text-muted-foreground">Closing Balance</p>
+                      <div className="text-right">
                         <p className={`font-display font-bold ${r.outstandingBalance > 0 ? "text-warning" : "text-success"}`}>
                           ₹{Math.abs(r.outstandingBalance).toLocaleString("en-IN")} {r.outstandingBalance >= 0 ? "Dr" : "Cr"}
                         </p>
@@ -272,7 +272,7 @@ export default function Customers() {
             },
             {
               key: "outstandingBalance",
-              header: "Outstanding",
+              header: "Closing Balance",
               cell: (r) => {
                 const isOverLimit = r.creditLimit > 0 && r.outstandingBalance > r.creditLimit;
                 return (

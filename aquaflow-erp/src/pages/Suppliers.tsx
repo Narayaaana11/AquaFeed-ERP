@@ -250,7 +250,7 @@ export default function Suppliers() {
               </div>
               <div className="flex items-center justify-between mt-3">
                 <div>
-                  <p className="text-muted-foreground text-xs">Outstanding</p>
+                  <p className="text-muted-foreground text-xs">Closing Balance</p>
                   <p className={`font-display font-bold text-sm ${r.outstandingBalance > 0 ? "text-warning" : "text-success"}`}>
                     ₹{Math.abs(r.outstandingBalance || 0).toLocaleString("en-IN")} {(r.outstandingBalance || 0) >= 0 ? "Cr" : "Dr"}
                   </p>
@@ -331,7 +331,7 @@ export default function Suppliers() {
             },
             {
               key: "outstandingBalance",
-              header: "Outstanding",
+              header: "Closing Balance",
               cell: (r) => (
                 <span className={`font-medium ${r.outstandingBalance > 0 ? "text-warning" : "text-success"}`}>
                   ₹{Math.abs(r.outstandingBalance || 0).toLocaleString("en-IN")} {(r.outstandingBalance || 0) >= 0 ? "Cr" : "Dr"}

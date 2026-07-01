@@ -571,7 +571,7 @@ async function syncTallyData(targetCompanyId = null) {
           update: {
             $set: {
               name: c.name, phone: c.mobile || '', email: c.email || '', address: c.mailing_address || '', state: c.mailing_state || '',
-              gstNumber: c.gstn ? c.gstn.toUpperCase() : '', outstandingBalance: Math.abs(parseFloat(c.closing_balance) || 0),
+              gstNumber: c.gstn ? c.gstn.toUpperCase() : '', outstandingBalance: parseFloat(c.closing_balance) || 0,
               type: 'Wholesale', isActive: true, notes: `Synced from Tally group: ${c.parent}`, company: companyId
             }
           },
@@ -598,7 +598,7 @@ async function syncTallyData(targetCompanyId = null) {
             $set: {
               name: s.name, contactPerson: 'Tally Contact', phone: s.mobile || '', email: s.email || '', address: s.mailing_address || '',
               state: s.mailing_state || '', gstNumber: s.gstn ? s.gstn.toUpperCase() : '', paymentTerms: 'Net30',
-              outstandingBalance: Math.abs(parseFloat(s.closing_balance) || 0), notes: `Synced from Tally group: ${s.parent}`, isActive: true, company: companyId
+              outstandingBalance: parseFloat(s.closing_balance) || 0, notes: `Synced from Tally group: ${s.parent}`, isActive: true, company: companyId
             }
           },
           upsert: true
