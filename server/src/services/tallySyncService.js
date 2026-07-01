@@ -1221,22 +1221,24 @@ function startSyncScheduler() {
     return;
   }
 
-  const pollInterval = parseInt(process.env.POLL_INTERVAL_MS) || 60000;
+  const pollInterval = parseInt(process.env.POLL_INTERVAL_MS) || 300000;
   console.log(`⏰ Starting Tally Sync background worker (Interval: ${pollInterval}ms)`);
   
-  // Run once on startup
-  setTimeout(() => {
-    syncTallyData().catch(err => console.error('Error in startup Tally sync:', err));
-  }, 5000);
-
-  // Set interval
-  syncIntervalId = setInterval(async () => {
+  const runSync = async () => {
     try {
       await syncTallyData();
     } catch (err) {
       console.error('Error during scheduled Tally sync:', err.message);
+    } finally {
+      // Schedule the next run only after this one completes
+      syncIntervalId = setTimeout(runSync, pollInterval);
     }
-  }, pollInterval);
+  };
+
+  // Run once on startup
+  syncIntervalId = setTimeout(() => {
+    runSync();
+  }, 5000);
 }
 
 /**
@@ -1244,7 +1246,7 @@ function startSyncScheduler() {
  */
 function stopSyncScheduler() {
   if (syncIntervalId) {
-    clearInterval(syncIntervalId);
+    clearTimeout(syncIntervalId);
     syncIntervalId = null;
     console.log('🛑 Tally Sync background worker stopped.');
   }
