@@ -38,6 +38,7 @@ export default function Sales() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [page, setPage] = useState(1);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
@@ -48,9 +49,14 @@ export default function Sales() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, filterStatus]);
+
   const { data: salesData, isLoading, refetch } = useSales({
     search: searchQuery || undefined,
     status: filterStatus !== "All" ? filterStatus : undefined,
+    page,
   });
   const invoices = salesData?.data || [];
 
@@ -286,6 +292,9 @@ export default function Sales() {
       ) : (
         <DataTable
           data={invoices}
+          page={page}
+          totalPages={Math.max(1, Math.ceil((salesData?.total || 0) / 50))}
+          onPageChange={setPage}
           mobileCard={(r) => {
             const balance = r.total - (r.paidAmount || 0);
             return (

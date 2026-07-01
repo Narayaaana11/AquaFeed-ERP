@@ -16,9 +16,12 @@ interface DataTableProps<T> {
   emptyAction?: ReactNode;
   /** Optional mobile card renderer. If provided, shown on mobile instead of the table. */
   mobileCard?: (row: T, index: number) => ReactNode;
+  page?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
 }
 
-export function DataTable<T>({ columns, data, emptyTitle, emptyDescription, emptyAction, mobileCard }: DataTableProps<T>) {
+export function DataTable<T>({ columns, data, emptyTitle, emptyDescription, emptyAction, mobileCard, page, totalPages, onPageChange }: DataTableProps<T>) {
   const isEmpty = data.length === 0;
 
   return (
@@ -85,6 +88,29 @@ export function DataTable<T>({ columns, data, emptyTitle, emptyDescription, empt
           <p className="font-display font-semibold text-foreground">{emptyTitle ?? "No data yet"}</p>
           <p className="mt-1 text-sm text-muted-foreground">{emptyDescription ?? "Nothing to display here."}</p>
           {emptyAction && <div className="mt-4 flex justify-center">{emptyAction}</div>}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {page !== undefined && totalPages !== undefined && onPageChange && totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <button
+            onClick={() => onPageChange(Math.max(1, page - 1))}
+            disabled={page === 1}
+            className="px-3 h-8 rounded-md border border-border bg-surface text-sm font-medium disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+            disabled={page === totalPages}
+            className="px-3 h-8 rounded-md border border-border bg-surface text-sm font-medium disabled:opacity-50"
+          >
+            Next
+          </button>
         </div>
       )}
     </div>
