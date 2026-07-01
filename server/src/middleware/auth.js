@@ -26,18 +26,27 @@ const protect = async (req, res, next) => {
     // Allow context-switching only to companies the user is explicitly allowed to access
     if (req.query.companyId && req.query.companyId !== String(user.company._id)) {
       const requestedId = req.query.companyId;
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(requestedId);
-      const isAllowed = isValidObjectId &&
-        Array.isArray(user.accessibleCompanies) &&
-        user.accessibleCompanies.some(id => String(id) === requestedId);
+      
+      if (requestedId === 'all') {
+        const allowedIds = [user.company._id];
+        if (Array.isArray(user.accessibleCompanies)) {
+          allowedIds.push(...user.accessibleCompanies);
+        }
+        req.companyId = { $in: allowedIds };
+      } else {
+        const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(requestedId);
+        const isAllowed = isValidObjectId &&
+          Array.isArray(user.accessibleCompanies) &&
+          user.accessibleCompanies.some(id => String(id) === requestedId);
 
-      if (!isAllowed) {
-        return res.status(403).json({
-          success: false,
-          message: 'Not authorized to access this company.',
-        });
+        if (!isAllowed) {
+          return res.status(403).json({
+            success: false,
+            message: 'Not authorized to access this company.',
+          });
+        }
+        req.companyId = requestedId;
       }
-      req.companyId = requestedId;
     }
 
     next();
