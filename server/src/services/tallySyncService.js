@@ -319,6 +319,7 @@ async function executeQuery(connection, queryStr, params = []) {
           }
         }
       ]).toArray();
+    }
     // 10. Batches query (Opening)
     if (normalized.startsWith('SELECT name, item, opening_balance, opening_rate, opening_value, godown, manufactured_on FROM mst_opening_batch_allocation')) {
       return await connection.collection('mst_opening_batch_allocation').find({}).toArray();
